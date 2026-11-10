@@ -1,0 +1,8 @@
+﻿# 统一用 LF 存库，Windows 检出也不再变 CRLF
+* text=auto eol=lf
+
+# 二进制
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

@@ -1,0 +1,34 @@
+# 依赖
+node_modules
+
+# 环境变量：真实 key 只留在本机，示例文件要提交
+.env
+.env.*
+!.env.example
+
+# 构建 / 打包产物
+dist
+target
+build
+*.tsbuildinfo
+
+# 本地数据（数据目录指到仓库内时才生效）
+data/
+*.db
+*.db.backup
+*.db-wal
+*.db-shm
+files/
+logs/
+*.log
+
+# 临时与测试
+coverage/
+.tmp/
+
+# 编辑器 / 系统
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

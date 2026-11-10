@@ -1,0 +1,26 @@
+{
+  "name": "@corpus/core",
+  "version": "0.0.0",
+  "description": "",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.18.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.18.0",
+  "type": "module",
+  "private": true,
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
