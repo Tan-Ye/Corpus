@@ -22,5 +22,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "openai": "^7.53.0"
   }
 }

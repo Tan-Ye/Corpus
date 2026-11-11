@@ -3,5 +3,12 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  "compilerOptions": {
+    // shadcn CLI 只读这个文件里的 paths，用来把 @/* 解析成 src/*
+    // 和 tsconfig.app.json、vite.config.ts 三处必须一致
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }
