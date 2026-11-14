@@ -1,31 +1,31 @@
 {
-  // 一个根配置管住所有包（M0 不需要分 project references）
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    // 一个根配置管住所有包（M0 不需要分 project references）
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2023", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
 
-    // tsc 在根跑，@types/node 也装在根
-    "types": ["node"],
+        // tsc 在根跑，@types/node 也装在根
+        "types": ["node"],
 
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "noFallthroughCasesInSwitch": true,
 
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "resolveJsonModule": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
+        "resolveJsonModule": true,
 
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
 
-    // 只做类型检查，不产出文件（运行交给 tsx / vite）
-    "noEmit": true
-  },
-  // web 有自己的 tsconfig 工程（vite/client 类型、tsx、allowImportingTsExtensions），
-  // 由它自己的 `tsc -b` 检查，这里只管 core / server
-  "include": ["packages/core/src/**/*.ts", "packages/server/src/**/*.ts"],
-  "exclude": ["node_modules", "**/dist"]
+        // 只做类型检查，不产出文件（运行交给 tsx / vite）
+        "noEmit": true
+    },
+    // web 有自己的 tsconfig 工程（vite/client 类型、tsx、allowImportingTsExtensions），
+    // 由它自己的 `tsc -b` 检查，这里只管 core / server
+    "include": ["packages/core/src/**/*.ts", "packages/server/src/**/*.ts"],
+    "exclude": ["node_modules", "**/dist"]
 }

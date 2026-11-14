@@ -1,7 +1,9 @@
 import { initLLMConfig } from '@corpus/core';
 import { createApp } from './app';
 import env from './env';
+import { runMigrations } from './db';
 
+await runMigrations();
 // 启动前就校验配置：缺变量立刻失败，而不是等第一个请求
 initLLMConfig({
     baseUrl: env.LLM_BASE_URL,

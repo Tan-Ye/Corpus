@@ -1,7 +1,8 @@
-import { Router } from "express";
-import { llmStream } from "@corpus/core";
-import type { Message, LLMStream } from "@corpus/core";
-import { pipeSSE, streamText } from "../utils";
+import { Router } from 'express';
+import { llmStream } from '@corpus/core';
+import type { Message } from '@corpus/core/types';
+import type { LLMStream } from '@corpus/core';
+import { pipeSSE, streamFrames } from '../utils';
 
 const router = Router();
 
@@ -10,7 +11,7 @@ const TEST_MESSAGES: Message[] = [
         role: 'user',
         content: '随意输出一段100字以内的文本,什么都可以，用于测试连通性',
     },
-]
+];
 
 router.get('/', async (req, res) => {
     let stream: LLMStream;
@@ -24,12 +25,10 @@ router.get('/', async (req, res) => {
         return;
     }
 
-    await pipeSSE(res, streamText(stream), {
+    await pipeSSE(res, streamFrames(stream), {
         abort: () => stream.controller.abort(),
         isAborted: () => stream.controller.signal.aborted,
     });
 });
 
-export {
-    router,
-}
+export default router;

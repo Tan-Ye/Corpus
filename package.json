@@ -1,28 +1,41 @@
 {
-  "name": "Corpus",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "private": "true",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "pnpm --filter @corpus/server dev",
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.18.0",
-      "onFail": "download"
+    "name": "Corpus",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "private": true,
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "dev": "pnpm --filter @corpus/server dev",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint",
+        "lint:fix": "oxlint --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devEngines": {
+        "packageManager": {
+            "name": "pnpm",
+            "version": "12.18.0",
+            "onFail": "download"
+        }
+    },
+    "packageManager": "pnpm@12.18.0",
+    "type": "module",
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@types/node": "^26.6.6",
+        "eslint": "^10.14.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-react-refresh": "^0.5.7",
+        "globals": "^17.14.0",
+        "oxlint": "^1.93.0",
+        "prettier": "^3.10.1",
+        "typescript": "^7.0.2",
+        "typescript-eslint": "^8.72.2"
     }
-  },
-  "packageManager": "pnpm@12.18.0",
-  "type": "module",
-  "devDependencies": {
-    "@types/node": "^26.6.6",
-    "typescript": "^7.0.2"
-  }
 }

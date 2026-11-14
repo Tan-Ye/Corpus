@@ -24,8 +24,9 @@ packages/web/src/
 2. `components/ui/` 是 shadcn 生成物，**不改**。要调整表现就在 `components/<模块>/` 里包一层，或在使用处传 `className`。
 3. 路径别名 `@/*` → `src/*`，与 `vite.config.ts` 的 `resolve.alias`、`tsconfig.json` / `tsconfig.app.json` 的 `paths`、`components.json` 的 `aliases` 四处必须一致。
 4. **没有 `src/lib/`**。`cn` 由 shadcn v4 的 `cn` 包提供，统一从 `@/utils` 转出；`utils/` 是唯一的工具目录。
-5. 会话与消息的类型集中在 `src/types/chat.ts`；后端契约变化时只改这一个文件。
-6. 组件文件用 kebab-case，组件名用 PascalCase，全部具名导出（页面同理，不用 default）。
-7. 演示数据放 `pages/<模块>/demo-data.ts`，接上真实接口后整个文件删除，不要留在业务代码里。
-8. 新增 shadcn 组件只走 CLI（`pnpm exec shadcn add <组件>`），不手写 `components/ui/` 下的文件。
-9. 移动端与桌面端共用同一套组件，用断点控制显隐；不为移动端另写一套组件。
+5. `utils/` 里除 `request.ts` 外只放纯函数。`request.ts` 是 **fetch 封装**（基础设施，有副作用），**不从 `@/utils` 桶导出**，必须 `import { get, post, requestStream } from '@/utils/request'`，避免每次引 utils 都把 HTTP 层拖进包里。流式（SSE）一律用 `requestStream`，普通接口用 `get` / `post`。
+6. 会话与消息的类型集中在 `src/types/chat.ts`；后端契约变化时只改这一个文件。
+7. 组件文件用 kebab-case，组件名用 PascalCase，全部具名导出（页面同理，不用 default）。
+8. 演示数据放 `pages/<模块>/demo-data.ts`，接上真实接口后整个文件删除，不要留在业务代码里。
+9. 新增 shadcn 组件只走 CLI（`pnpm exec shadcn add <组件>`），不手写 `components/ui/` 下的文件。
+10. 移动端与桌面端共用同一套组件，用断点控制显隐；不为移动端另写一套组件。

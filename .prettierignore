@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+.tmp
+pnpm-lock.yaml
+*.db
+*.db-wal
+*.db-shm
+*.db.backup
+
+# 文档和规则文件不参与格式化，避免无意义的整篇 diff
+docs
+conv
+AGENTS.md
+README.md

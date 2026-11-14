@@ -1,0 +1,32 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["typescript", "unicorn", "oxc", "import", "react"],
+    "categories": {
+        "correctness": "error",
+        "suspicious": "warn"
+    },
+    "rules": {
+        "no-console": "off",
+        "react/react-in-jsx-scope": "off",
+        "import/no-unassigned-import": "off",
+        "oxc/no-async-endpoint-handlers": "off"
+    },
+    "env": {
+        "es2024": true
+    },
+    "overrides": [
+        {
+            "files": ["packages/core/**", "packages/server/**"],
+            "env": {
+                "node": true
+            }
+        },
+        {
+            "files": ["packages/web/**"],
+            "env": {
+                "browser": true
+            }
+        }
+    ],
+    "ignorePatterns": ["**/dist/**", "**/data/**", "**/.tmp/**", "**/*.d.ts"]
+}

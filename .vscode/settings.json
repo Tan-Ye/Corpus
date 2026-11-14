@@ -1,0 +1,18 @@
+{
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+    // 关键：不跟随文件现有缩进，否则 2 空格的老文件保存后还是 2 空格
+    "editor.detectIndentation": false,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+
+    "files.eol": "\n",
+    "files.encoding": "utf8",
+
+    // 没有 .prettierrc 就不格式化，避免在别的仓库里误用
+    "prettier.requireConfig": true,
+    "[typescript]": {
+        "editor.defaultFormatter": "wickhan.prettier-formatter-optimized"
+    }
+}
