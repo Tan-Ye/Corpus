@@ -1,5 +1,14 @@
 import express from 'express';
-import { healthzApi, chatReadyzApi, chatApi, conversationApi } from './api';
+import {
+    healthzApi,
+    chatReadyzApi,
+    chatApi,
+    conversationApi,
+    toolsApi,
+    dbApi,
+    pluginsApi,
+    logsApi,
+} from './api';
 
 /**
  * 建 app 但不 listen，方便测试和评测脚本直接拿 app 用。
@@ -15,6 +24,10 @@ export function createApp() {
     app.use('/api/chat-readyz', chatReadyzApi);
     app.use('/api/chat', chatApi);
     app.use('/api/conversation', conversationApi);
+    app.use('/api/tools', toolsApi);
+    app.use('/api/db', dbApi);
+    app.use('/api/plugins', pluginsApi);
+    app.use('/api/logs', logsApi);
 
     return app;
 }

@@ -1,4 +1,4 @@
-import { get, post } from '@/utils/request';
+import { del, get, post } from '@/utils/request';
 import type { Conversation } from '@corpus/core/types';
 
 /**
@@ -16,4 +16,9 @@ export function getConversations(): Promise<Conversation[]> {
  */
 export function createConversation(name: string): Promise<Conversation> {
     return post<Conversation>('/conversation', { name });
+}
+
+/** 删除会话：服务端软删会话，并清掉它的日志 */
+export function deleteConversation(id: string): Promise<void> {
+    return del<void>(`/conversation/${id}`);
 }

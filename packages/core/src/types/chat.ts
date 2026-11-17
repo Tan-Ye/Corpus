@@ -19,8 +19,10 @@ export interface ChatMessage {
 }
 
 export interface Message {
-    role: 'user' | 'assistant' | 'system';
+    role: 'user' | 'assistant' | 'system' | 'tool';
     content: string;
+    toolCalls?: ToolCall[]; // assistant 发出调用时带
+    toolCallId?: string; // tool 回填结果时带
 }
 
 export interface ChatSendRequest {
@@ -41,4 +43,19 @@ export type StreamFrame =
     | { type: 'text'; text: string }
     | { type: 'done' }
     | { type: 'stopped' }
-    | { type: 'error'; message: string };
+    | { type: 'error'; message: string }
+    | { type: 'tool'; name: string; status: 'start' | 'end'; ok?: boolean };
+
+// 工具描述：MCP 的 inputSchema 清洗后就是它
+export interface ToolDefinition {
+    name: string;
+    description: string;
+    parameters: unknown; // JSON Schema
+}
+
+// 模型请求调用某个工具
+export interface ToolCall {
+    id: string; // 模型给的 id，tool 消息要回填
+    name: string; // mdn__search
+    arguments: Record<string, unknown>; // 已解析
+}

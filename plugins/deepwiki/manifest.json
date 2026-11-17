@@ -1,0 +1,11 @@
+{
+    "id": "deepwiki",
+    "name": "DeepWiki 仓库问答",
+    "description": "对公开 GitHub 仓库做问答，回答基于仓库源码与文档",
+    "modelHint": "查开源项目的内部实现、设计原理、源码细节时用这个；不适合查 API 用法。",
+    "tools": ["ask_wiki_question"],
+    "transport": {
+        "type": "http",
+        "url": "https://mcp.deepwiki.com/mcp"
+    }
+}

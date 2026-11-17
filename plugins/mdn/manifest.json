@@ -1,0 +1,9 @@
+{
+    "id": "mdn",
+    "name": "MDN 文档",
+    "description": "查询 MDN 的 Web 文档与浏览器兼容性数据（官方 MCP 服务）",
+    "transport": {
+        "type": "http",
+        "url": "https://mcp.mdn.mozilla.net/"
+    }
+}

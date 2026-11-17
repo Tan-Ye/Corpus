@@ -1,0 +1,10 @@
+{
+    "id": "context7",
+    "name": "Context7 文档",
+    "description": "查询 TypeScript / Node / Rust / Python / Go / Java 及各类第三方库的官方文档",
+    "modelHint": "查语言的 API 用法、函数签名、配置示例时用这个；先 resolve-library-id 拿库 id，再 query-docs 提问。",
+    "transport": {
+        "type": "http",
+        "url": "https://mcp.context7.com/mcp"
+    }
+}

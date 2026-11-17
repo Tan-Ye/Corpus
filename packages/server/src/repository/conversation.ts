@@ -14,10 +14,12 @@ export function listConversations(): Conversation[] {
 }
 
 /**
- * 会话删除
+ * 会话删除（软删）：会话本身打删除标记，它的日志直接清掉，
+ * 免得日志列表里留下没有主人的记录。
  */
-export function deleteConversation(id: string) {
+export function deleteConversation(id: string): void {
     db.prepare(`UPDATE conversations SET deleted_at = ? WHERE id = ?`).run(Date.now(), id);
+    db.prepare('DELETE FROM logs WHERE conversation_id = ?').run(id);
 }
 
 /** 已存在就不动，新会话才插入；消息发送前调用 */
@@ -43,4 +45,11 @@ export function listChatMessages(conversationId: string) {
             ORDER BY seq ASC`,
         )
         .all(conversationId) as unknown as ChatMessage[];
+}
+
+/**
+ * 会话重命名
+ */
+export function renameConversation(id: string, title: string): void {
+    db.prepare(`UPDATE conversations SET title = ? WHERE id = ?`).run(title, id);
 }

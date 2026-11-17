@@ -19,7 +19,7 @@ data/
 *.db-wal
 *.db-shm
 files/
-logs/
+/logs/
 *.log
 
 # 临时与测试

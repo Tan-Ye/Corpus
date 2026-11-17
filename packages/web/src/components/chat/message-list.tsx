@@ -1,14 +1,76 @@
+import { memo, useEffect, useRef } from 'react';
+import { Check, Loader2 } from 'lucide-react';
+
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import type { ChatMessage, Citation } from '@corpus/core/types';
+import type { ChatMessage } from '@corpus/core/types';
+
+import { Markdown } from './markdown';
+
+/** 工具调用的一行状态，流式期间才有 */
+export interface ToolStatus {
+    text: string;
+    done: boolean;
+}
 
 interface MessageListProps {
+    conversationId: string;
     messages: ChatMessage[];
     suggestions: string[];
+    toolStatus: ToolStatus | null;
+    /** 流式进行中：底部要显示活动指示，否则长时间没字看起来像卡死 */
+    busy: boolean;
     onPickSuggestion: (text: string) => void;
 }
 
-export function MessageList({ messages, suggestions, onPickSuggestion }: MessageListProps) {
+export function MessageList({
+    conversationId,
+    messages,
+    suggestions,
+    toolStatus,
+    busy,
+    onPickSuggestion,
+}: MessageListProps) {
+    const bottomRef = useRef<HTMLDivElement | null>(null);
+    const lastCountRef = useRef(0);
+    const lastConversationRef = useRef(conversationId);
+
+    useEffect(() => {
+        const node = bottomRef.current;
+        if (!node) {
+            return;
+        }
+
+        const viewport = node.closest('[data-slot="scroll-area-viewport"]');
+        if (!(viewport instanceof HTMLElement)) {
+            return;
+        }
+
+        // 切会话：计数要归零，否则新会话消息更少会被判成"不是新消息"
+        const isNewConversation = conversationId !== lastConversationRef.current;
+        if (isNewConversation) {
+            lastConversationRef.current = conversationId;
+            lastCountRef.current = 0;
+        }
+
+        const isNewMessage = messages.length > lastCountRef.current;
+        lastCountRef.current = messages.length;
+
+        // 刚切换过来，直接贴底，两边内容长度没得比
+        if (isNewConversation) {
+            node.scrollIntoView({ block: 'end' });
+            return;
+        }
+
+        const distanceToBottom =
+            viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+
+        // 用户往上翻着看历史时不要抢滚动：只有来了新消息、或者本来就贴着底部才跟随
+        if (isNewMessage || distanceToBottom < 120) {
+            node.scrollIntoView({ block: 'end' });
+        }
+    }, [conversationId, messages]);
+
     return (
         <ScrollArea className="min-h-0 flex-1">
             <div className="mx-auto w-full max-w-3xl px-6 pt-8 pb-6">
@@ -25,6 +87,24 @@ export function MessageList({ messages, suggestions, onPickSuggestion }: Message
                         )}
                     </div>
                 )}
+
+                {busy && (
+                    <div
+                        className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"
+                        aria-live="polite"
+                    >
+                        {toolStatus?.done ? (
+                            <Check className="size-3.5" />
+                        ) : (
+                            <Loader2 className="size-3.5 animate-spin" />
+                        )}
+                        <span>{toolStatus?.text ?? '正在生成'}</span>
+                        <TypingDots />
+                    </div>
+                )}
+
+                {/* 滚动锚点：贴在内容最底部 */}
+                <div ref={bottomRef} />
             </div>
         </ScrollArea>
     );
@@ -59,7 +139,7 @@ function EmptyState({ suggestions, onPickSuggestion }: EmptyStateProps) {
     );
 }
 
-function UserMessage({ message }: { message: ChatMessage }) {
+const UserMessage = memo(function UserMessage({ message }: { message: ChatMessage }) {
     return (
         <div className="flex justify-end">
             <p className="max-w-xl rounded-2xl bg-muted px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap">
@@ -67,51 +147,29 @@ function UserMessage({ message }: { message: ChatMessage }) {
             </p>
         </div>
     );
-}
+});
 
-function AssistantMessage({ message }: { message: ChatMessage }) {
-    const citations = message.citations ?? [];
-
+/**
+ * 用 memo 包住：流式时只有最后一条的 content 变化，
+ * 历史消息的 message 对象引用没变，可以直接跳过重渲染。
+ */
+const AssistantMessage = memo(function AssistantMessage({ message }: { message: ChatMessage }) {
     return (
         <div>
             <p className="mb-2 text-xs text-muted-foreground">CORPUS</p>
 
-            <div className="flex flex-col gap-3 text-base leading-7">
-                {message.content.split('\n\n').map((paragraph) => (
-                    <p key={paragraph}>{renderParagraph(paragraph, citations)}</p>
-                ))}
-            </div>
-
-            {/* 出处栏在小屏隐藏，这里给一份紧凑版 */}
-            {citations.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 xl:hidden">
-                    {citations.map((citation, index) => (
-                        <span
-                            key={citation.id}
-                            className="text-xs text-muted-foreground underline decoration-dotted underline-offset-4"
-                        >
-                            {index + 1} · {citation.title} {citation.locator}
-                        </span>
-                    ))}
-                </div>
-            )}
+            <Markdown content={message.content} />
         </div>
     );
-}
+});
 
-/** 把正文里的 [1] [2] 变成上标编号，对应右侧出处栏的顺序 */
-function renderParagraph(paragraph: string, citations: Citation[]) {
-    return paragraph.split(/(\[\d+\])/g).map((fragment) => {
-        const matched = /^\[(\d+)\]$/.exec(fragment);
-        if (!matched) return fragment;
-
-        const citation = citations[Number(matched[1]) - 1];
-        if (!citation) return fragment;
-
-        return (
-            <sup key={fragment} className="px-0.5 text-xs font-medium text-brand">
-                {matched[1]}
-            </sup>
-        );
-    });
+/** 三个跳动的点：动画在 index.css 里，避免用行内 delay */
+function TypingDots() {
+    return (
+        <span className="flex items-center gap-0.5" aria-hidden="true">
+            <span className="corpus-dot size-1 rounded-full bg-current" />
+            <span className="corpus-dot size-1 rounded-full bg-current" />
+            <span className="corpus-dot size-1 rounded-full bg-current" />
+        </span>
+    );
 }

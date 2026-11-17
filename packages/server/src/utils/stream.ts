@@ -9,11 +9,24 @@ import type { StreamFrame } from '@corpus/core/types';
  * 所以循环退出后要再判一次 signal，不能只靠 catch。
  * 首包和末包通常是空 delta，直接跳过。
  */
-export async function* streamFrames(stream: LLMStream): AsyncGenerator<StreamFrame> {
+export async function* streamFrames(
+    stream: LLMStream,
+    acc: StreamAccumulator = createAccumulator(),
+): AsyncGenerator<StreamFrame> {
     try {
         for await (const chunk of stream) {
-            const text = chunk.choices[0]?.delta?.content;
-            if (text) yield { type: 'text', text };
+            const delta = chunk.choices[0]?.delta || {};
+            if (delta?.content) {
+                acc.text += delta.content;
+                yield { type: 'text', text: delta.content };
+            }
+            for (const part of delta?.tool_calls ?? []) {
+                const entry = acc.toolCalls.get(part.index) ?? { id: '', name: '', args: '' };
+                if (part.id) entry.id = part.id;
+                if (part.function?.name) entry.name = part.function.name;
+                if (part.function?.arguments) entry.args += part.function.arguments; // 拼接
+                acc.toolCalls.set(part.index, entry);
+            }
         }
     } catch (error) {
         // 中断时抛错的情况
@@ -31,4 +44,16 @@ export async function* streamFrames(stream: LLMStream): AsyncGenerator<StreamFra
     }
 
     yield { type: 'done' };
+}
+
+export interface StreamAccumulator {
+    text: string;
+    toolCalls: Map<number, { id: string; name: string; args: string }>;
+}
+
+export function createAccumulator(): StreamAccumulator {
+    return {
+        text: '',
+        toolCalls: new Map(),
+    };
 }

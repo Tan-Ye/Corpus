@@ -12,6 +12,9 @@ function resolveDBPath() {
 
 const dbPath = resolveDBPath();
 
+/** 数据库文件位置，stdio 插件需要通过环境变量拿到它 */
+export const DB_PATH = dbPath;
+
 mkdirSync(dirname(dbPath), { recursive: true });
 
 export const db = new DatabaseSync(dbPath);

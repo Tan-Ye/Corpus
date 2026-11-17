@@ -1,4 +1,4 @@
-import { ArrowUp, BookOpen, Paperclip } from 'lucide-react';
+import { ArrowUp, BookOpen, Paperclip, Square } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,12 +6,28 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 interface ChatComposerProps {
     value: string;
+    busy: boolean;
     onChange: (value: string) => void;
     onSubmit: () => void;
+    onStop: () => void;
 }
 
-export function ChatComposer({ value, onChange, onSubmit }: ChatComposerProps) {
+export function ChatComposer({ value, busy, onChange, onSubmit, onStop }: ChatComposerProps) {
     const canSubmit = value.trim().length > 0;
+
+    function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+        if (event.key !== 'Enter' || event.shiftKey) {
+            return;
+        }
+
+        // 中文输入法选词时按回车不是"发送"：isComposing 为 true，keyCode 229 是旧浏览器兜底
+        if (event.nativeEvent.isComposing || event.keyCode === 229) {
+            return;
+        }
+
+        event.preventDefault();
+        onSubmit();
+    }
 
     return (
         <div className="shrink-0 px-6 pb-5">
@@ -26,12 +42,7 @@ export function ChatComposer({ value, onChange, onSubmit }: ChatComposerProps) {
                     <Textarea
                         value={value}
                         onChange={(event) => onChange(event.target.value)}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter' && !event.shiftKey) {
-                                event.preventDefault();
-                                onSubmit();
-                            }
-                        }}
+                        onKeyDown={handleKeyDown}
                         placeholder="问点什么…"
                         rows={1}
                         className="max-h-40 min-h-9 resize-none border-0 bg-transparent px-2 py-1.5 text-base shadow-none focus-visible:ring-0"
@@ -72,15 +83,27 @@ export function ChatComposer({ value, onChange, onSubmit }: ChatComposerProps) {
                             </Tooltip>
                         </div>
 
-                        <Button
-                            type="submit"
-                            size="icon"
-                            disabled={!canSubmit}
-                            aria-label="发送"
-                            className="size-8 rounded-full bg-brand text-brand-foreground hover:bg-brand/90"
-                        >
-                            <ArrowUp className="size-4" />
-                        </Button>
+                        {busy ? (
+                            <Button
+                                type="button"
+                                size="icon"
+                                onClick={onStop}
+                                aria-label="停止生成"
+                                className="size-8 rounded-full bg-foreground text-background hover:bg-foreground/90"
+                            >
+                                <Square className="size-3 fill-current" />
+                            </Button>
+                        ) : (
+                            <Button
+                                type="submit"
+                                size="icon"
+                                disabled={!canSubmit}
+                                aria-label="发送"
+                                className="size-8 rounded-full bg-brand text-brand-foreground hover:bg-brand/90"
+                            >
+                                <ArrowUp className="size-4" />
+                            </Button>
+                        )}
                     </div>
                 </form>
 
