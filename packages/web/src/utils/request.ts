@@ -128,7 +128,48 @@ export function put<T>(
     return request<T>(path, { ...options, method: 'PUT', body });
 }
 
+/** PATCH：局部更新，例如只改会话标题 */
+export function patch<T>(
+    path: string,
+    body?: unknown,
+    options: { timeout?: number } = {},
+): Promise<T> {
+    return request<T>(path, { ...options, method: 'PATCH', body });
+}
+
+/** 拼出完整 API 地址：XHR 上传这类不能走 request() 的场景要用 */
+export function apiUrl(path: string): string {
+    return buildUrl(path);
+}
+
 /** DELETE 不能叫 delete（关键字），所以叫 del */
 export function del<T>(path: string, options: { timeout?: number } = {}): Promise<T> {
     return request<T>(path, { ...options, method: 'DELETE' });
+}
+
+/**
+ * 二进制上传：body 原样发出去，响应按 JSON 解析。
+ * 文件名走 query（服务端不用 multipart，少一个依赖）。
+ */
+export async function postBinary<T>(
+    path: string,
+    body: Blob | ArrayBuffer,
+    options: { timeout?: number; contentType?: string } = {},
+): Promise<T> {
+    let response: Response;
+
+    try {
+        response = await fetch(buildUrl(path), {
+            method: 'POST',
+            headers: { 'content-type': options.contentType ?? 'application/octet-stream' },
+            body,
+            signal: AbortSignal.timeout(options.timeout ?? TIMEOUT),
+        });
+    } catch {
+        throw new ApiError('连不上服务端');
+    }
+
+    if (!response.ok) throw await toApiError(response);
+
+    return (await response.json()) as T;
 }

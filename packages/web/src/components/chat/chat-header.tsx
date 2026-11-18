@@ -3,16 +3,28 @@ import { Moon, PanelLeft, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Theme } from '@/hooks';
+import { cn } from '@/utils';
 
 interface ChatHeaderProps {
     title: string;
     model: string;
+    /** 没配置模型时徽章用警示色，点它去设置 */
+    modelConfigured: boolean;
     theme: Theme;
     onToggleTheme: () => void;
     onOpenSidebar: () => void;
+    onOpenSettings: () => void;
 }
 
-export function ChatHeader({ title, model, theme, onToggleTheme, onOpenSidebar }: ChatHeaderProps) {
+export function ChatHeader({
+    title,
+    model,
+    modelConfigured,
+    theme,
+    onToggleTheme,
+    onOpenSidebar,
+    onOpenSettings,
+}: ChatHeaderProps) {
     const nextLabel = theme === 'dark' ? '切换到浅色' : '切换到深色';
 
     return (
@@ -29,9 +41,19 @@ export function ChatHeader({ title, model, theme, onToggleTheme, onOpenSidebar }
 
             <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{title}</h1>
 
-            <span className="hidden shrink-0 rounded-md border px-2 py-0.5 text-xs text-muted-foreground sm:inline-block">
+            <button
+                type="button"
+                onClick={onOpenSettings}
+                title={modelConfigured ? `模型：${model}（点击修改）` : '还没有配置模型，点这里填写'}
+                className={cn(
+                    'hidden shrink-0 rounded-md border px-2 py-0.5 text-xs transition-colors sm:inline-block',
+                    modelConfigured
+                        ? 'text-muted-foreground hover:text-foreground'
+                        : 'border-destructive/40 text-destructive hover:bg-destructive/10',
+                )}
+            >
                 {model}
-            </span>
+            </button>
 
             <Tooltip>
                 <TooltipTrigger

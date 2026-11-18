@@ -106,6 +106,16 @@ function Status({ plugin, pending }: { plugin: PluginView; pending: boolean }) {
         return <span className="text-xs text-muted-foreground">已开启</span>;
     }
 
+    // 启动时服务端是串行连外接 MCP 的，这期间既没连上也没报错
+    if (plugin.connecting) {
+        return (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" />
+                正在连接…
+            </span>
+        );
+    }
+
     if (!plugin.connected) {
         return <span className="text-xs text-destructive">连接失败</span>;
     }

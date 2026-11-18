@@ -3,3 +3,4 @@ export * from './chat';
 export * from './plugin';
 export * from './logs';
 export * from './mcp-servers';
+export * from './settings';

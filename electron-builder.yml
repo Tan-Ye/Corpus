@@ -1,0 +1,38 @@
+# Electron 打包配置
+# 打包前会先跑 scripts/build-package.mjs，产出 dist-package/app/（server.mjs + web + resources）
+
+appId: com.corpus.app
+productName: Corpus
+copyright: Copyright © 2026 Corpus
+
+directories:
+    output: dist-package/electron
+
+# 只打壳：server 与前端作为 extraResources 放进去，不走 asar 内的 node_modules
+files:
+    - package.json
+    - packages/shell/main.mjs
+
+extraResources:
+    - from: dist-package/app/server.mjs
+      to: server.mjs
+    - from: dist-package/app/web
+      to: web
+    - from: dist-package/app/resources
+      to: resources
+
+win:
+    target:
+        - target: nsis
+          arch: [x64]
+    artifactName: Corpus-${version}-setup.${ext}
+
+nsis:
+    # 装到用户目录（默认 %LOCALAPPDATA%\Programs），程序目录可写，
+    # data/ 才能放在安装目录旁边；装到 Program Files 时程序会自动回退到 %LOCALAPPDATA%
+    oneClick: false
+    perMachine: false
+    allowToChangeInstallationDirectory: true
+    createDesktopShortcut: true
+    createStartMenuShortcut: true
+    shortcutName: Corpus

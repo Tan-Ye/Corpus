@@ -1,6 +1,6 @@
 import { db } from '../db';
 
-export type LogType = 'tool' | 'llm' | 'error';
+export type LogType = 'tool' | 'llm' | 'error' | 'retrieval';
 
 export interface LogEntry {
     id: string;

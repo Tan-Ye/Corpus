@@ -10,12 +10,14 @@
 功能定位：**私人 / 团队的资料库指南 agent**。
 一句话：*你的资料，一个有据可查的整体。*
 
-当前状态：**设计完成，尚未开始编码。下一步是 M0。**
+当前状态：**0.1.0 已可打包发布**（M0~M6、M9 完成：流式对话、文档解析入库、关键词检索、引用与拒答、MCP 工具；便携版 zip 可双击运行）。
+未完成的语义检索、联网检索、评测集、Electron 安装包见 `docs/HANDOFF.md` §5/§7 与 `CHANGELOG.md`。
 
 必读顺序：
 1. 本文件
-2. [docs/architecture.md](docs/architecture.md) —— 契约与数据模型（**最重要**）
-3. [docs/roadmap.md](docs/roadmap.md) —— 里程碑与验收
+2. [docs/HANDOFF.md](docs/HANDOFF.md) —— 最近一次交接：现状、缺口、计划
+3. [docs/architecture.md](docs/architecture.md) —— 契约与数据模型（**最重要**）
+4. [docs/roadmap.md](docs/roadmap.md) —— 里程碑与验收
 
 ---
 
@@ -48,20 +50,33 @@ export const EMBEDDING = {
 ```
 Corpus/
 ├─ packages/
-│  ├─ core/          # 数据类型、Host 接口、检索、生成链路
-│  ├─ server/        # HTTP API、会话、文件、SQLite、迁移
-│  ├─ web/           # 前端 + 6 个渲染器
-│  └─ shell/         # Tauri 2（最后做）
-├─ plugins/
-│  ├─ mdn/           # MCP 配置示例
-│  └─ db-explorer/
-├─ evals/            # 30 条问答集 + 回归脚本
+│  ├─ core/          # 数据类型、LLM 调用、解析与分块
+│  ├─ server/        # HTTP API、会话、文件、SQLite、迁移、检索、MCP
+│  ├─ web/           # 前端
+│  └─ shell/         # 桌面壳（空，Electron 方案待做）
+├─ plugins/          # 内置 MCP 插件清单
+├─ prompts/          # 系统提示词与交接摘要模板
+├─ scripts/          # 便携版打包（build-package.mjs）与启动器（launcher.mjs）
+├─ evals/            # 30 条问答集 + 回归脚本（空，待做）
 └─ docs/
 ```
 
 ---
 
 ## 2. 工作方式约定
+
+### 硬规则：非平凡改动先提案，确认后再动手
+
+以下情况必须先给出「目标 / 假设 / 方案与代价 / 风险 / 待确认问题」，得到用户确认后才能改代码：
+
+- 跨文件或跨包改动
+- 改接口契约、数据模型、迁移
+- 有多个可行方案，或需求存在歧义
+- 预计超过 30 分钟，或要引入新依赖
+
+豁免：单行修复、用户已给出明确指令、纯查询。
+
+详细清单和反模式见 skill `software-engineering-mindset`。
 
 ### 硬规则：每个里程碑必须"30 分钟能跑"
 
@@ -112,28 +127,15 @@ Corpus/
 
 ---
 
-## 5. M0 该做什么（下一步）
+## 5. 当前阶段与下一步
 
-目标：**4~6 人日内，能对着 LLM 逐字流式对话。**
+0.1.0 已可打包（文档解析 + 文档查询）。打包形态是**便携 zip**（内置 node.exe + 启动器），Electron 安装包未做。
 
-不要在这一步引入的东西：
-- 数据库
-- 检索
-- 前端框架的完整布局
-- Tauri
+- 已完成 / 未完成：见 `docs/HANDOFF.md` §1、§5；版本变更见 `CHANGELOG.md`
+- 下一步优先级与工作量：见 `docs/HANDOFF.md` §7
+- 里程碑定义与验收：见 `docs/roadmap.md`
 
-具体：
-
-```
-1. pnpm workspace 骨架，packages/core + packages/server
-2. server 起一个 HTTP 服务，POST /chat 返回 SSE 流
-3. core 里写一个最薄的 llm() 调用封装（OpenAI 兼容）
-4. .env 读取 baseURL / model / apiKey
-5. 一个 index.html + 原生 JS 的输入框（不做框架）
-6. 中断：客户端断开 → 服务端 abort 上游请求
-```
-
-**验收**：`pnpm dev` → 打开页面 → 输入问题 → 逐字出现 → 点停止能停下。
+**开工前先看 §7 的排序，不要顺手扩范围。**
 
 ---
 
@@ -146,6 +148,9 @@ Corpus/
 | 3 | 教学笔记 | **写，但只记坑** | `docs/journal/NN-<里程碑>.md`，每篇 15 分钟封顶 |
 | 4 | 团队形态 | v1 **不预留抽象层** | 将来只加用户校验和权限 |
 | 5 | 联网检索 | 用**搜索 API**，不自建抓取 | M8 |
+| 6 | 桌面壳 | **Electron**（2026-11 由 Tauri 改） | 打包前必须先验证 `node:sqlite` 在 Electron 的 Node 下可用 |
+| 7 | 模型配置 | 存库，**界面配置优先于 `.env`** | `settings` 表的 `llm.*`；`.env` 只在非 production 读取 |
+| 8 | 便携版运行时 | **内置 `node.exe`** + 单文件 server | `scripts/build-package.mjs`，用户不需要装 Node |
 
 ### 判断依据（记下来，避免反复讨论）
 
@@ -179,8 +184,9 @@ Corpus/
 | **parser 只返回 string** | 事后想做"点引用跳原文"要重写整条管道 | M2 的 `ParseResult.locatorMap` 一次做对 |
 | **自我污染** | 幻觉入库后被当成证据，越用越错 | M10：`provenance` + `verified` + 会话不入索引 |
 | **核心冻结过早** | 插件扭曲架构补缺陷 | 先跑通 3 个插件再冻结 |
-| **Tauri sidecar** | 僵尸进程、找不到 sidecar | 命名带 target triple；`ExitRequested` 里手动 kill |
-| **单文件打包原生模块** | `better-sqlite3` 打包失败 | 固定 `node.exe` + resources 目录 |
+| **多实例抢数据库** | 两个 Corpus 同开一个 SQLite，后开的写不进去（`attempt to write a readonly database`） | launcher 单实例认领 + 启动写探针（已做） |
+| **打包后资源路径** | `prompts/`、`plugins/` 按源码相对路径读，打包后静默读空（提示词变空、插件消失） | 用 `CORPUS_RESOURCES_DIR` / `CORPUS_WEB_DIR`（已做） |
+| **Electron 里 `node:sqlite` 可能不可用** | 整个打包方案要重选存储驱动 | 写 Electron 主进程之前先验证 |
 | **评测被砍** | 调参全靠感觉 | M7 必做，2 人日 |
 
 ---

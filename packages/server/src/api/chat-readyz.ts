@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { llmStream } from '@corpus/core';
+import { isLLMConfigured, llmStream } from '@corpus/core';
 import type { Message } from '@corpus/core/types';
 import type { LLMStream } from '@corpus/core';
 import { pipeSSE, streamFrames } from '../utils';
@@ -14,6 +14,11 @@ const TEST_MESSAGES: Message[] = [
 ];
 
 router.get('/', async (req, res) => {
+    if (!isLLMConfigured()) {
+        res.status(400).json({ error: '还没有配置模型' });
+        return;
+    }
+
     let stream: LLMStream;
     try {
         stream = await llmStream(TEST_MESSAGES);

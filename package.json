@@ -1,20 +1,28 @@
 {
     "name": "Corpus",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "version": "0.1.0",
+    "description": "本地文档知识库问答：上传文档，带引用地提问",
+    "main": "packages/shell/main.mjs",
+    "author": "Corpus",
     "private": true,
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "dev": "pnpm --filter @corpus/server dev",
+        "test": "pnpm -r --if-present test",
+        "dev": "node scripts/dev.mjs",
+        "dev-el": "node scripts/dev.mjs --electron",
+        "dev:server": "pnpm --filter @corpus/server dev",
+        "dev:web": "pnpm --filter @corpus/web dev",
+        "electron": "electron --no-sandbox packages/shell",
+        "build": "node scripts/build-package.mjs --out dist-package/app && electron-builder --config electron-builder.yml",
+        "build:app": "node scripts/build-package.mjs --out dist-package/app",
+        "build:web": "pnpm --filter @corpus/web build",
         "typecheck": "tsc --noEmit",
         "lint": "oxlint",
         "lint:fix": "oxlint --fix",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test:flow": "pnpm --filter @corpus/server test:flow"
     },
     "keywords": [],
-    "author": "",
     "license": "ISC",
     "devEngines": {
         "packageManager": {
@@ -28,6 +36,8 @@
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/node": "^26.6.6",
+        "electron": "^45.3.3",
+        "electron-builder": "^26.18.0",
         "eslint": "^10.14.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-react-hooks": "^7.1.1",

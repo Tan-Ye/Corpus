@@ -6,3 +6,6 @@ export { default as toolsApi } from './tools';
 export { default as dbApi } from './db';
 export { default as pluginsApi } from './plugins';
 export { default as logsApi } from './logs';
+export { default as documentsApi } from './documents';
+export { default as settingsApi } from './settings';
+export { default as backupApi } from './backup';

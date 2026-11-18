@@ -1,12 +1,22 @@
 /** 引用片段：M4 接检索后由后端给出，现在前端先按这个形状占位 */
 export interface Citation {
     id: string;
+    /** 来源文档 id：用它打开原文 */
+    documentId?: string;
     /** 文档名，追溯用 */
     title: string;
     /** 定位：章节 / 页码 / 行号 */
     locator: string;
-    /** 原文逐字片段，供核对；必须是原文，不能是模型改写 */
+    /** 命中片段在 markdown 里的行范围，打开原文时用来定位 */
+    startLine?: number;
+    endLine?: number;
+    /** 摘要：界面上展示的原文片段 */
     excerpt?: string;
+    /**
+     * 完整原文块，只用于注入提示词。
+     * 不能和 excerpt 合并：界面只要两行摘要，模型需要整段才能答完整。
+     */
+    content?: string;
     /** 溯源等级，决定这条能不能当证据 */
     provenance?: 'user' | 'doc' | 'web' | 'model';
 }
@@ -16,6 +26,8 @@ export interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
     citations?: Citation[];
+    /** 生成被用户中断：历史里也要能看出来 */
+    stopped?: boolean;
 }
 
 export interface Message {
@@ -29,6 +41,8 @@ export interface ChatSendRequest {
     messages: Message[];
     /** 不传表示新会话，服务端会生成一个，并作为第一帧 created 返回 */
     conversationId?: string;
+    /** 是否先用本地文档库做检索注入（内置功能「文档检索」开着时为 true） */
+    useRetrieval?: boolean;
 }
 
 /**
@@ -44,6 +58,10 @@ export type StreamFrame =
     | { type: 'done' }
     | { type: 'stopped' }
     | { type: 'error'; message: string }
+    /** 非致命提醒：上下文被截断、建议新开会话等 */
+    | { type: 'notice'; level: 'info' | 'warn'; message: string }
+    /** 本轮用到的参考资料，前端据此渲染出处；顺序对应正文里的 [n] */
+    | { type: 'sources'; citations: Citation[] }
     | { type: 'tool'; name: string; status: 'start' | 'end'; ok?: boolean };
 
 // 工具描述：MCP 的 inputSchema 清洗后就是它

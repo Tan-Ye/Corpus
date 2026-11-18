@@ -13,6 +13,8 @@ export interface PluginView {
     kind?: PluginKind;
     enabled: boolean;
     connected: boolean;
+    /** 服务端还在连（启动时串行连接外接 MCP）：界面显示「连接中」而不是「失败」 */
+    connecting?: boolean;
     toolCount: number;
     error?: string;
 }

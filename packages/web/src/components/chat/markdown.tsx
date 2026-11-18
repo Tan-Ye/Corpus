@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
@@ -33,6 +33,105 @@ export function Markdown({ content, className }: MarkdownProps) {
     );
 }
 
+/** hast 里我们真正用到的最小结构 */
+interface HastNode {
+    type: string;
+    value?: string;
+    tagName?: string;
+    /** 规范要求 element 必须有 properties（可以是空对象），react-markdown 会对它用 Object.hasOwn */
+    properties?: Record<string, unknown>;
+    children?: HastNode[];
+}
+
+const CITATION_PATTERN = /\[\d+\]/;
+const CITATION_EXACT = /^\[(\d+)\]$/;
+
+/**
+ * 把正文里的 [n] 变成上标。
+ *
+ * 在 rehype 阶段做（而不是改 markdown 文本），这样代码块里的 [1] 不会被误伤。
+ */
+function rehypeCitationMarkers() {
+    return (tree: unknown) => {
+        walk(tree as HastNode);
+    };
+}
+
+function walk(node: HastNode): void {
+    const children = node.children;
+
+    if (!children) {
+        return;
+    }
+
+    // 倒序遍历：splice 后不会影响还没处理的节点下标
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+        const child = children[index];
+
+        if (!child) {
+            continue;
+        }
+
+        if (child.type === 'text' && child.value && CITATION_PATTERN.test(child.value)) {
+            children.splice(index, 1, ...splitCitationText(child.value));
+            continue;
+        }
+
+        // 代码里的 [1] 是代码，不是引用
+        if (child.type === 'element' && (child.tagName === 'code' || child.tagName === 'pre')) {
+            continue;
+        }
+
+        walk(child);
+    }
+}
+
+function splitCitationText(value: string): HastNode[] {
+    return value
+        .split(/(\[\d+\])/g)
+        .filter(Boolean)
+        .map((part) => {
+            const match = CITATION_EXACT.exec(part);
+
+            if (!match) {
+                return { type: 'text', value: part };
+            }
+
+            return {
+                type: 'element',
+                tagName: 'sup',
+                // 少了它 react-markdown 会执行 Object.hasOwn(undefined, key) 直接抛错
+                properties: {},
+                children: [{ type: 'text', value: match[1] ?? '' }],
+            };
+        });
+}
+
+/** [n] 上标：点击滚动到本条回答下面的出处条目 */
+function CitationMark({ children }: { children?: ReactNode }) {
+    const number = String(children ?? '').trim();
+
+    function handleClick(event: MouseEvent<HTMLButtonElement>) {
+        const root = event.currentTarget.closest('[data-message-id]');
+        const target = root?.querySelector(`[data-citation-ref="${number}"]`);
+
+        target?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    return (
+        <sup>
+            <button
+                type="button"
+                onClick={handleClick}
+                aria-label={`查看第 ${number} 条出处`}
+                className="mx-0.5 rounded px-0.5 font-mono text-[0.7em] text-brand hover:underline"
+            >
+                [{number}]
+            </button>
+        </sup>
+    );
+}
+
 /**
  * 行内代码和块级代码共用这一个组件。
  * 块级的高亮 class（hljs language-xxx）由 rehype-highlight 加，行内的没有。
@@ -53,7 +152,7 @@ function Code({ className, children }: { className?: string; children?: ReactNod
  * - 渲染期定义组件也会被 lint 判成 nested component
  */
 const REMARK_PLUGINS = [remarkGfm];
-const REHYPE_PLUGINS = [rehypeHighlight];
+const REHYPE_PLUGINS = [rehypeHighlight, rehypeCitationMarkers];
 
 const COMPONENTS: Components = {
     p: ({ children }) => <p className="leading-7">{children}</p>,
@@ -85,6 +184,7 @@ const COMPONENTS: Components = {
         <pre className="overflow-x-auto rounded-xl border bg-muted/40 p-3">{children}</pre>
     ),
     code: Code,
+    sup: CitationMark,
     table: ({ children }) => (
         <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">{children}</table>

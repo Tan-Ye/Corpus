@@ -7,16 +7,27 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 interface ChatComposerProps {
     value: string;
     busy: boolean;
+    /** 没配置模型时禁用输入：服务端会拒绝，前端先别让用户白打一段字 */
+    disabled?: boolean;
+    disabledHint?: string;
     onChange: (value: string) => void;
     onSubmit: () => void;
     onStop: () => void;
 }
 
-export function ChatComposer({ value, busy, onChange, onSubmit, onStop }: ChatComposerProps) {
-    const canSubmit = value.trim().length > 0;
+export function ChatComposer({
+    value,
+    busy,
+    disabled = false,
+    disabledHint,
+    onChange,
+    onSubmit,
+    onStop,
+}: ChatComposerProps) {
+    const canSubmit = value.trim().length > 0 && !disabled;
 
     function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-        if (event.key !== 'Enter' || event.shiftKey) {
+        if (event.key !== 'Enter' || event.shiftKey || disabled) {
             return;
         }
 
@@ -43,7 +54,8 @@ export function ChatComposer({ value, busy, onChange, onSubmit, onStop }: ChatCo
                         value={value}
                         onChange={(event) => onChange(event.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="问点什么…"
+                        disabled={disabled}
+                        placeholder={disabled ? (disabledHint ?? '先完成配置') : '问点什么…'}
                         rows={1}
                         className="max-h-40 min-h-9 resize-none border-0 bg-transparent px-2 py-1.5 text-base shadow-none focus-visible:ring-0"
                     />
@@ -108,7 +120,9 @@ export function ChatComposer({ value, busy, onChange, onSubmit, onStop }: ChatCo
                 </form>
 
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                    Enter 发送 · Shift + Enter 换行 · 答案会标注出处
+                    {disabled
+                        ? (disabledHint ?? '先完成配置再提问')
+                        : 'Enter 发送 · Shift + Enter 换行 · 答案会标注出处'}
                 </p>
             </div>
         </div>

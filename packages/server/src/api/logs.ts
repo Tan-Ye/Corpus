@@ -5,7 +5,7 @@ import type { LogFilter, LogType } from '../repository';
 
 const router = Router();
 
-const LOG_TYPES: LogType[] = ['tool', 'llm', 'error'];
+const LOG_TYPES: LogType[] = ['tool', 'llm', 'error', 'retrieval'];
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 

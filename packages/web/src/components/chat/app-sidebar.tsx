@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Database, Plug, Plus, ScrollText, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, Database, Download, FileText, Plug, Plus, ScrollText, Settings, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -24,14 +24,21 @@ interface AppSidebarProps {
     onSelect: (id: string) => void;
     onNew: () => void;
     onDeleteConversation: (id: string) => void;
+    onRenameConversation: (id: string, title: string) => Promise<void>;
     onOpenDatabase: () => void;
     onOpenPlugins: () => void;
     onOpenLogs: () => void;
     onOpenMcp: () => void;
+    onOpenDocuments: () => void;
+    /** 模型配置 */
+    onOpenSettings: () => void;
+    /** 下载数据库备份 */
+    onBackup: () => void;
     /** 对应的内置功能被关掉时，入口也要一起隐藏 */
     dbEnabled: boolean;
     logsEnabled: boolean;
     mcpEnabled: boolean;
+    docsEnabled: boolean;
 }
 
 export function AppSidebar({
@@ -40,13 +47,18 @@ export function AppSidebar({
     onSelect,
     onNew,
     onDeleteConversation,
+    onRenameConversation,
     onOpenDatabase,
     onOpenPlugins,
     onOpenLogs,
     onOpenMcp,
+    onOpenDocuments,
+    onOpenSettings,
+    onBackup,
     dbEnabled,
     logsEnabled,
     mcpEnabled,
+    docsEnabled,
 }: AppSidebarProps) {
     const [expanded, setExpanded] = useState(false);
 
@@ -68,6 +80,12 @@ export function AppSidebar({
             label: 'MCP',
             icon: Plug,
             onClick: onOpenMcp,
+        },
+        docsEnabled && {
+            id: 'documents',
+            label: '文档',
+            icon: FileText,
+            onClick: onOpenDocuments,
         },
     ].filter((feature): feature is SidebarFeature => Boolean(feature));
 
@@ -115,27 +133,49 @@ export function AppSidebar({
                 )}
             </div>
 
-            <Separator />
-
+            {/* 这里原来有一条 Separator，紧贴在会话搜索框上方，看起来像压住了输入框。
+                功能入口和会话列表用留白分组即可，不靠分割线。 */}
             <ConversationList
                 conversations={conversations}
                 activeId={activeId}
                 onSelect={onSelect}
                 onDelete={onDeleteConversation}
+                onRename={onRenameConversation}
             />
 
             <Separator />
 
             <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
-                <button
-                    type="button"
-                    onClick={onOpenPlugins}
-                    className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
-                >
-                    <Settings className="size-3.5" />
-                    插件
-                </button>
-                <span className="px-1">本地</span>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={onOpenPlugins}
+                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
+                    >
+                        <Settings className="size-3.5" />
+                        插件
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
+                    >
+                        <SlidersHorizontal className="size-3.5" />
+                        模型
+                    </button>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={onBackup}
+                        title="下载数据库备份"
+                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
+                    >
+                        <Download className="size-3.5" />
+                        备份
+                    </button>
+                    <span className="px-1">本地</span>
+                </div>
             </div>
         </aside>
     );

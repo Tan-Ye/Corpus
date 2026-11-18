@@ -2,9 +2,9 @@ import { existsSync } from 'node:fs';
 import type { Dirent } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { DB_PATH } from '../db';
+import { resourcesDir } from '../paths';
 import {
     deleteCustomServer,
     listCustomServers,
@@ -36,6 +36,8 @@ export interface PluginView {
     source: 'builtin' | 'custom';
     enabled: boolean;
     connected: boolean;
+    /** init 还没跑完且没连上：界面显示「连接中」而不是「连接失败」 */
+    connecting: boolean;
     toolCount: number;
     error?: string;
 }
@@ -70,10 +72,9 @@ interface PluginEntry {
 }
 
 /**
- * 插件目录：仓库根的 plugins/。
- * 注意这是相对源码文件的位置算的，M11 打包成单文件后要改成从 resources 目录读。
+ * 插件目录：开发时是仓库根 plugins/，打包后由 CORPUS_RESOURCES_DIR 指到包内。
  */
-const PLUGINS_DIR = fileURLToPath(new URL('../../../../plugins', import.meta.url));
+const PLUGINS_DIR = join(resourcesDir(), 'plugins');
 
 const SEPARATOR = '__';
 const MANIFEST_FILE = 'manifest.json';
@@ -82,6 +83,8 @@ class ToolRegistry {
     private readonly plugins = new Map<string, PluginEntry>();
     private readonly tools = new Map<string, RegisteredTool>();
     private initialised = false;
+    /** init 是否已经跑完（成功或失败都算）：这之前未连接的插件是「连接中」而不是「失败」 */
+    private ready = false;
 
     /**
      * 扫一遍 plugins 下每个目录的 manifest：
@@ -95,6 +98,16 @@ class ToolRegistry {
         }
         this.initialised = true;
 
+        try {
+            await this.loadPlugins();
+        } finally {
+            // 串行连接结束（含中途失败）才算 ready。
+            // 前端轮询就是在等这个标志变真，否则会把「还没连」显示成「连不上」。
+            this.ready = true;
+        }
+    }
+
+    private async loadPlugins(): Promise<void> {
         let entries: Dirent[] = [];
 
         try {
@@ -385,6 +398,9 @@ class ToolRegistry {
             source: plugin.source,
             enabled: plugin.enabled,
             connected: plugin.client !== null,
+            // 只有「init 没跑完、已启用、还没连上、也没报错」才是连接中；
+            // 连过但失败（error 有值）必须显示失败，不能被连接中盖住
+            connecting: !this.ready && plugin.enabled && plugin.client === null && !plugin.error,
             toolCount: plugin.toolNames.length,
             error: plugin.error,
         };

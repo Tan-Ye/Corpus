@@ -1,10 +1,11 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import type { ChatMessage } from '@corpus/core/types';
+import type { ChatMessage, Citation } from '@corpus/core/types';
 
+import { CitationViewer } from './citation-viewer';
 import { Markdown } from './markdown';
 
 /** 工具调用的一行状态，流式期间才有 */
@@ -154,11 +155,57 @@ const UserMessage = memo(function UserMessage({ message }: { message: ChatMessag
  * 历史消息的 message 对象引用没变，可以直接跳过重渲染。
  */
 const AssistantMessage = memo(function AssistantMessage({ message }: { message: ChatMessage }) {
+    const citations = message.citations ?? [];
+    const [viewing, setViewing] = useState<Citation | null>(null);
     return (
-        <div>
+        <div data-message-id={message.id}>
             <p className="mb-2 text-xs text-muted-foreground">CORPUS</p>
 
             <Markdown content={message.content} />
+
+            {message.stopped && (
+                <p className="mt-2 text-xs text-muted-foreground">（已停止生成）</p>
+            )}
+
+            {citations.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1.5 border-t pt-2">
+                    <p className="text-xs text-muted-foreground">参考了这几段</p>
+
+                    {citations.map((citation, index) => (
+                        <div
+                            key={citation.id}
+                            data-citation-ref={index + 1}
+                            className="group flex items-start gap-2 rounded-md px-1 py-1 text-xs transition-colors hover:bg-accent/50"
+                        >
+                            <span className="shrink-0 font-mono text-brand">[{index + 1}]</span>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-muted-foreground">
+                                    {citation.title}
+                                    <span className="ml-1 text-muted-foreground/70">
+                                        {citation.locator}
+                                    </span>
+                                </p>
+                                {citation.excerpt && (
+                                    <p className="line-clamp-2 text-muted-foreground/70">
+                                        {citation.excerpt}
+                                    </p>
+                                )}
+                            </div>
+                            {citation.documentId && (
+                                <button
+                                    type="button"
+                                    onClick={() => setViewing(citation)}
+                                    className="shrink-0 rounded px-1.5 py-0.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent hover:text-foreground focus-visible:opacity-100"
+                                >
+                                    查看原文
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <CitationViewer citation={viewing} onClose={() => setViewing(null)} />
         </div>
     );
 });

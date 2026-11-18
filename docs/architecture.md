@@ -29,16 +29,16 @@
 | 语言 | TypeScript | 全栈一套工具链，类型安全够用 | Python：前后端两套语言，RAG 逻辑与 UI 割裂 |
 | 前端 | React + Vite | 生态成熟，渲染器组件好写 | — |
 | 服务端 | Node.js 独立包 | **评测必须 headless 可跑**，这是硬约束 | 进程内嵌进 Electron：CI 跑评测要开窗口 |
-| 桌面壳 | Tauri 2 | 体积小、内存安全、启动快 | Electron：同一场景下省不掉 Node，却多一份打包体积 |
-| 存储 | SQLite + sqlite-vec | 零安装、单文件、可整体备份带走 | Postgres+pgvector：私人场景不该要求装数据库 |
+| 桌面壳 | Electron（计划中，未实现） | 主进程可直接跑 Node server，没有 sidecar 生命周期 | Tauri：Rust 工具链 + sidecar 三条硬约束；2026-11 改 Electron |
+| 存储 | SQLite（`node:sqlite`）+ FTS5 | 零安装、单文件、Node 内置 | Postgres+pgvector：私人场景不该要求装数据库；`better-sqlite3` 需按 Electron ABI rebuild |
 | LLM | OpenAI 兼容 API | 一份配置覆盖绝大多数 provider | 逐家适配：无收益 |
 | 扩展 | MCP（只依赖 tools） | 已有现成 server，不用自己发明协议 | 自研插件协议：重复劳动且无生态 |
 
-### 关于 Tauri 的明确认知
+### 关于桌面壳的明确认知
 
-**RAG 逻辑仍在 TypeScript 里，Tauri 只替换了壳。** 性能收益在启动速度和内存占用，不在检索和生成。
+**RAG 逻辑始终在 TypeScript 里，桌面壳只替换外壳。** 性能收益在启动速度和内存占用，不在检索和生成。
 
-为此付出的代价：两套运行时 + sidecar 生命周期管理（约 3~5 人日）。可控。
+0.1.0 先不做桌面壳：便携 zip（内置 `node.exe` + 启动器）已经能双击使用，验证产品价值不需要先付 Electron 的打包成本。详见 §3。
 
 ---
 
@@ -48,46 +48,47 @@
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Shell（Tauri 2，最后做）                     │
-│   单实例 → 随机端口 → spawn → /health → 加载  │
-│   退出时手动 kill sidecar（Tauri 不会自动做） │
+│  Electron 主进程（计划中，未实现）             │
+│   单实例锁 → 启动 server → 等 /healthz → 窗口 │
+│   退出时关闭 server（同进程则随进程退出）     │
 └───────────────────┬──────────────────────────┘
-                    │ HTTP (localhost, 随机端口)
+                    │ HTTP (localhost)
 ┌───────────────────▼──────────────────────────┐
-│  Server（独立 Node 包，可 headless 运行）     │
-│  ┌────────────────────────────────────────┐  │
-│  │ 核心（冻结对象）                        │  │
-│  │  会话 / 对话 / 流式 / 文件 / 索引 /     │  │
-│  │  检索 / 引用 / 拒答 / SQLite / 迁移     │  │
-│  │  Host API ← 唯一的插件契约              │  │
-│  └────────────────────────────────────────┘  │
-│  ┌────────────────────────────────────────┐  │
-│  │ 插件点                                  │  │
-│  │  MCP client（query-time）               │  │
-│  │  Parser 注册表（ingest-time，静态）     │  │
-│  └────────────────────────────────────────┘  │
+│  Server（独立包，可 headless 运行）           │
+│  会话 / 对话 / 流式 / 文件 / 索引 / 检索 /    │
+│  引用 / 拒答 / SQLite / 迁移                  │
+│  MCP client（query-time）                     │
+│  Parser 注册表（ingest-time，静态）           │
 └──────────────────────────────────────────────┘
 ```
 
-### 为什么 server 必须是独立进程
+### 为什么 server 必须是独立包
 
-1. **评测要能在 CI 里 headless 跑**。长在 Electron/Tauri 里就跑不了。
+1. **评测要能在 CI 里 headless 跑**。长在桌面壳里就跑不了。
 2. **本地与服务器共用同一份代码**。"本地也当服务器处理"这条判断才能落地。
-3. **规避原生模块 ABI 问题**。`better-sqlite3` 是原生扩展，跟着自己的 Node 版本走，不用为 Electron 的 ABI 反复 rebuild。
+3. **不依赖桌面壳**。Express + `node:sqlite` 都是普通 Node 能力，Electron 只是外壳。
 
-### 关于 sidecar 的三个硬约束（Tauri 2）
+### 0.1.0 的实际形态：便携 zip
 
-1. **命名必须带 target triple**：`node-x86_64-pc-windows-msvc.exe`，否则打包后报"找不到 sidecar"。
-2. **Tauri 不会自动 kill sidecar**：必须在 `RunEvent::ExitRequested` 里手动 kill，否则关闭窗口后留下僵尸 Node 进程。
-3. **`externalBin` 必须在编译期声明**：不能运行时决定。所以"插件式新增 sidecar"这条路不存在——插件只能是 MCP。
+- 目录：`node.exe` + `server.mjs`（rolldown 打成单文件）+ `web/` + `resources/`（prompts、plugins）+ `start.bat` + `launcher.mjs`
+- `start.bat` → `launcher.mjs`：清旧端口文件 → 设 `CORPUS_WEB_DIR` / `CORPUS_RESOURCES_DIR` → `import('./server.mjs')` → 读 `CORPUS_PORT_FILE` → 打开浏览器
+- 前端由 server 同源托管（`express.static` + SPA 回落），不需要单独的静态服务器
+- 固定端口 8787；launcher 启动前扫描 8787–8807，结束占用端口的旧 Corpus 实例（别的程序占用时只报错，不误杀）
+- 关掉命令行窗口即退出：launcher 不再“认领”后台旧实例，窗口里的进程就是唯一服务进程
+- 不用 `pnpm`、不用 `node_modules`：server 已 bundle
 
-### 打包方式（不要编译成单文件可执行）
+### Electron 方案（下一步，未实现）
 
-原生模块（`better-sqlite3`）在单文件打包方案里最容易炸。
+- 主进程直接 `import` server（同进程）或 child 启动；窗口 `loadURL('http://127.0.0.1:<port>/')`，保持同源
+- 单实例：`app.requestSingleInstanceLock()`
+- 资源路径：`process.resourcesPath`，通过 `CORPUS_RESOURCES_DIR` 传给 server
+- **前置风险**：`node:sqlite` 在 Electron 内置的 Node 下是否可用，必须在写主进程之前验证；不可用则要换驱动
 
-**采用**：`externalBin` 放固定的 `node.exe`，server 代码作为 `bundle.resources` 放进去，启动时 `spawn(node.exe resources/server/index.js)`。
+### 为什么不再用 Tauri
 
-体积大一点（Node 约 80MB），换零打包黑魔法，且环境永远一致。
+Tauri 需要 Rust 工具链，且 sidecar 有三条硬约束（命名带 target triple、`ExitRequested` 里手动 kill、`externalBin` 编译期声明）。Electron 的 Node 进程可以直接跑现有 server 代码，路径更短。
+
+代价是体积：Electron 安装包约 100MB，便携版内置 `node.exe` 约 90MB。0.1.0 先用便携版验证产品，不引入 desktop 壳。
 
 ---
 
@@ -325,7 +326,7 @@ CREATE TABLE chunks (
   embedding_dim   INTEGER NOT NULL
 );
 
--- 向量（sqlite-vec 虚拟表）
+-- 向量（sqlite-vec 虚拟表，语义检索启用后才建）
 CREATE VIRTUAL TABLE chunk_vec USING vec0(
   chunk_id TEXT PRIMARY KEY,
   embedding FLOAT[1024]
@@ -368,7 +369,7 @@ CREATE VIRTUAL TABLE chunk_vec USING vec0(
 
 ### 9.5 规模上限
 
-SQLite + sqlite-vec 在 **10 万 chunk** 量级表现良好，**100 万级**开始吃力（全表扫描 + 内存）。
+SQLite + FTS5（0.1.0 实际使用的）在 **10 万 chunk** 量级表现良好，**100 万级**开始吃力（全表扫描 + 内存）。将来加向量检索时，`sqlite-vec` 也在同一量级。
 
 架构文档里写清楚这条：**超过上限则换存储后端**（pgvector / 分层索引）。现在不做，但要知道天花板在哪。
 
@@ -406,6 +407,8 @@ interface ParseResult {
      → 流式生成 + 引用挂载
 ```
 
+**0.1.0 实际只有关键词这一路**：`getEmbedder()` 返回 `null`，检索走 FTS5 + 覆盖率闸门；query 改写、rerank、信任过滤都还没接。上图是目标形态，不是现状。
+
 ### 10.3 拒答判定
 
 两条路径，都要实现：
@@ -438,10 +441,11 @@ interface ParseResult {
 
 ## 11. 安全与密钥
 
-- **key 绝不明文进 sqlite**。用 Windows DPAPI 加密后存储（Rust 侧调系统 API，是选 Tauri 的意外好处）
-- **key 永远不出 server 进程**。前端只能拿到"已配置/未配置"，任何接口都不回显
-- **开发用 `.env`**，用户配置 **优先于** `.env`，且 `.env` 只在 `NODE_ENV=development` 读取
-- 配置模型：`{ baseURL, model, apiKey, label }`，只支持 OpenAI 兼容格式
+- **0.1.0 现状**：API Key **明文存 `settings` 表**（`llm.apiKey`）。服务只绑 `127.0.0.1`、仅本机使用，风险与明文 `.env` 相当
+- **key 永远不出 server 进程**：`GET /api/settings/llm` 只回 `hasApiKey`，任何接口都不回显；日志不记录 key
+- **开发用 `.env`**，界面配置 **优先于** `.env`，且 `.env` 只在非 production 读取
+- 配置模型：`{ baseUrl, model, apiKey }`，只支持 OpenAI 兼容格式
+- **计划**：Electron 阶段用 `safeStorage`（OS 级加密）保存 key；在此之前文档不宣称“加密存储”
 
 ---
 
@@ -474,7 +478,8 @@ interface ParseResult {
 | 6 | **插件系统吃掉 AI 深度** | 变成在做框架而不是 AI 应用 | 静态注册 + 不做沙箱 | 全程 |
 | 7 | **规模天花板** | 超过 10 万 chunk 后变慢 | 文档里写清上限与迁移方案 | 记录即可 |
 | 8 | **首次启动下载 embedding 模型** | 用户体验差 | 进度条 + 断点续传 + 校验（2~3 人日） | M11 |
-| 9 | **Tauri sidecar 坑** | 僵尸进程、找不到 sidecar | 见 §3 三个硬约束 | M11 |
+| 9 | **Electron 里 `node:sqlite` 不可用** | 打包方案要换存储驱动 | 写主进程之前先验证 | M11 |
+| 11 | **多实例抢数据库** | 后开的实例写不进去（readonly） | launcher 单实例认领 + 启动写探针（已做） | 0.1.0 |
 | 10 | **PDF 解析低估** | 表格/双栏/扫描件无底洞 | 不做版面分析，先按页提文本 | M6 |
 
 ---
@@ -485,7 +490,7 @@ interface ParseResult {
 |---|---|---|---|
 | 本地形态 | localhost 服务 | 直接读写本地文件的函数 | 团队版可复用同一条代码路径 |
 | 服务端进程 | 独立 Node 包 | 进程内嵌进壳 | 评测必须 headless 可跑 |
-| 桌面壳 | Tauri | Electron | 体积/内存/安全；且进程外 server 已省掉 Node 差异 |
+| 桌面壳 | Electron（2026-11 由 Tauri 改） | Tauri | 主进程可直接跑现有 Node server，省掉 Rust 与 sidecar 生命周期 |
 | 插件协议 | MCP | 自研协议 | 已有现成 server，不重复造 |
 | UI 扩展 | 渲染描述 + 内生渲染器 | 插件给组件 / WebView | 避免前端被插件绑架 |
 | 分块策略 | 配置项（枚举） | 插件 | 过度设计，教学项目不需要 |

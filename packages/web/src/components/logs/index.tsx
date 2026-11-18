@@ -325,6 +325,13 @@ function ConversationRow({ label, count, active, onClick }: ConversationRowProps
     );
 }
 
+const TYPE_LABELS: Record<string, string> = {
+    tool: '工具',
+    llm: 'LLM',
+    error: '错误',
+    retrieval: '检索',
+};
+
 function LogRow({ item }: { item: LogEntry }) {
     return (
         <div className="border-b px-4 py-2 text-xs last:border-b-0">
@@ -333,13 +340,13 @@ function LogRow({ item }: { item: LogEntry }) {
 
                 <span
                     className={cn(
-                        'rounded px-1.5 py-0.5 text-[10px] uppercase',
+                        'rounded px-1.5 py-0.5 text-[10px]',
                         item.type === 'error'
                             ? 'bg-destructive/15 text-destructive'
                             : 'bg-muted text-muted-foreground',
                     )}
                 >
-                    {item.type}
+                    {TYPE_LABELS[item.type] ?? item.type}
                 </span>
 
                 <span className="min-w-0 flex-1 truncate font-mono">{item.name}</span>
