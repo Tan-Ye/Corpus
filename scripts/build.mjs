@@ -49,7 +49,13 @@ try {
         [join(repo, 'scripts', 'build-package.mjs'), '--out', 'dist-package/app'],
         '构建前端与 server 产物',
     );
-    run(process.execPath, [electronBuilderCli, '--config', 'electron-builder.yml'], '生成安装包');
+    // --publish never：electron-builder 在 CI 里检测到 tag 就想自己发 GitHub Release，
+    // 没配 GH_TOKEN 会直接失败。发布交给 .github/workflows/release.yml 的 gh 命令。
+    run(
+        process.execPath,
+        [electronBuilderCli, '--config', 'electron-builder.yml', '--publish', 'never'],
+        '生成安装包',
+    );
 } catch (error) {
     console.error('\n打包失败：', error instanceof Error ? error.message : String(error));
     process.exit(1);
