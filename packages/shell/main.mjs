@@ -1,5 +1,5 @@
-import { app, BrowserWindow, dialog } from 'electron';
-import { appendFileSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { appendFileSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
@@ -85,6 +85,89 @@ process.env.CORPUS_WEB_DIR = isDev
 /** 开发态可以指到 Vite（5173），默认走 server 同源托管 */
 const appUrl = process.env.CORPUS_APP_URL ?? 'http://127.0.0.1:8787/';
 
+/** 打包态读安装包版本；开发态 app.getVersion() 返回的是 Electron 版本，不能直接用 */
+function currentVersion() {
+    if (!isDev) {
+        return app.getVersion();
+    }
+
+    try {
+        const pkg = JSON.parse(readFileSync(join(here, '..', '..', 'package.json'), 'utf8'));
+        return String(pkg.version ?? '0.0.0');
+    } catch {
+        return app.getVersion();
+    }
+}
+
+/** 逐段比较版本号（1.2.3 > 1.2.0），足够判断「有没有新版本」 */
+function compareVersions(a, b) {
+    const pa = a.split('.').map((part) => Number.parseInt(part, 10) || 0);
+    const pb = b.split('.').map((part) => Number.parseInt(part, 10) || 0);
+
+    for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
+        const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+
+        if (diff !== 0) {
+            return diff;
+        }
+    }
+
+    return 0;
+}
+
+const RELEASE_API = 'https://api.github.com/repos/Tan-Ye/Corpus/releases/latest';
+
+/**
+ * 查 GitHub Releases 最新版。
+ * status：update（有新版本）/ latest（已是最新）/ error（查不了，附中文原因）。
+ * 网络失败不抛异常——界面要显示「检查失败」，而不是弹崩溃框。
+ */
+async function checkUpdate() {
+    const current = currentVersion();
+
+    try {
+        const res = await fetch(RELEASE_API, {
+            headers: {
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'Corpus',
+            },
+        });
+
+        if (res.status === 404) {
+            return { status: 'error', current, error: 'GitHub 上还没有发布过版本。' };
+        }
+
+        if (!res.ok) {
+            return { status: 'error', current, error: `更新服务返回 ${res.status}，稍后再试。` };
+        }
+
+        const data = await res.json();
+        const latest = String(data.tag_name ?? '').replace(/^v/i, '').trim();
+
+        if (!latest) {
+            return { status: 'error', current, error: '更新信息里没有版本号。' };
+        }
+
+        return {
+            status: compareVersions(latest, current) > 0 ? 'update' : 'latest',
+            current,
+            latest,
+            url: typeof data.html_url === 'string' ? data.html_url : '',
+            notes: typeof data.body === 'string' ? data.body.slice(0, 2000) : '',
+        };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { status: 'error', current, error: `连不上 GitHub：${message}` };
+    }
+}
+
+ipcMain.handle('corpus:app-info', () => ({
+    version: currentVersion(),
+    isDev,
+    platform: process.platform,
+}));
+ipcMain.handle('corpus:check-update', checkUpdate);
+
 let mainWindow = null;
 
 async function waitForServer(timeoutMs = 20_000) {
@@ -119,6 +202,8 @@ function createWindow() {
         webPreferences: {
             contextIsolation: true,
             nodeIntegration: false,
+            // preload 只暴露「版本 / 检查更新」两个只读能力（见 preload.cjs）
+            preload: join(here, 'preload.cjs'),
         },
     });
 

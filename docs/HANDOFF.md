@@ -9,7 +9,7 @@
 ## 0. 一句话现状
 
 **0.1.0 第一阶段完成**：上传文档（md/txt/docx/pdf）→ 解析切块 → **按需检索**（模型调用内置工具 `search_documents`）→ 带引用的回答 → 右侧「本次引用」面板可打开原文并高亮；工具查不到时模型明说「资料里没有」；MCP 工具已接入；模型在界面里配置；Electron 开发态可启动。
-**缺的是**：评测集（**2026-11-18 拍板推迟到二期**）、语义检索、联网检索、工具结果进引用、Electron 安装包（`pnpm build` 尚未验证）。
+**缺的是**：评测集（**2026-11-18 拍板推迟到二期**）、语义检索、联网检索、MCP 工具结果进引用、Electron 安装包实测（`pnpm build` 已改为 npmmirror 镜像 + electron-builder，尚未在本机跑通）。
 
 ---
 
@@ -110,13 +110,13 @@
 
 ### 2.9 发布形态（0.1.0 新增）
 
-- server 同时托管前端：`CORPUS_WEB_DIR` 指向 `web/`，非 `/api` 的 GET 回落 `index.html`
-- 资源路径：`CORPUS_RESOURCES_DIR` 指向包内 `resources/`（prompts + plugins）
-- 端口：**固定 8787**，不自动回退；实际端口写入 `CORPUS_PORT_FILE`，launcher 据此开浏览器
-- 启动清理：launcher 扫描 8787–8807，结束占用端口的旧 Corpus 实例（只杀 Corpus / node 进程；其他程序占用时只报错不动手）
-- 关窗口即退出：不再“认领”旧实例，窗口里的进程就是唯一的服务进程；`SIGINT/SIGTERM/SIGBREAK` 会显式收尾
+- 桌面壳：Electron 45（`packages/shell/main.mjs`），主进程内 `import` 单文件 server，用户不需要装 Node
+- server 同时托管前端：`CORPUS_WEB_DIR` 指向打包后的 `web/`，非 `/api` 的 GET 回落 `index.html`
+- 资源路径：`CORPUS_RESOURCES_DIR` 指向 `resources/`（prompts + plugins）
+- 端口：**固定 8787**，不自动回退；端口被别的程序占用时给中文错误
+- 单实例：Electron `requestSingleInstanceLock()`，第二个实例直接聚焦已有窗口
 - 启动写探针：数据库不可写时给中文原因并退出，不半启动
-- 打包：`scripts/build-package.mjs`（vite build + rolldown 打单文件 server + 复制 node.exe + 资源）
+- 打包：`pnpm build` → `scripts/build.mjs`（先 build-package 产 server.mjs + web + resources，再 electron-builder 打 NSIS 安装包）；Electron 下载走 npmmirror 镜像
 
 ---
 
@@ -161,9 +161,9 @@
 LLM_BASE_URL / LLM_MODEL / LLM_API_KEY   # 开发环境用；界面配置优先
 CORPUS_DB              # 数据库路径（默认 %APPDATA%\Corpus\corpus.db）
 CORPUS_CONTEXT_TOKENS  # 模型上下文窗口，默认 128000
-CORPUS_WEB_DIR         # 前端产物目录（打包时由 launcher 设置）
-CORPUS_RESOURCES_DIR   # prompts/ 与 plugins/ 的根目录（打包时由 launcher 设置）
-CORPUS_PORT_FILE       # 实际端口写入位置（launcher 读取）
+CORPUS_WEB_DIR         # 前端产物目录（打包时由 Electron 主进程设置）
+CORPUS_RESOURCES_DIR   # prompts/ 与 plugins/ 的根目录（打包时由 Electron 主进程设置）
+CORPUS_PORT_FILE       # 可选：把实际端口写到这个文件（调试用）
 ```
 
 ---
@@ -211,13 +211,13 @@ Get-ChildItem packages -Recurse -Filter *.test.ts | ForEach-Object { node --impo
 
 | # | 问题 | 影响 | 建议 |
 |---|---|---|---|
-| 1 | 拒答阈值 `0.25` 未标定 | 可能误拒或误收 | 有评测集后标定 |
+| 1 | 检索打分阈值 `0.25` 未标定 | 工具可能少召回或收进弱相关内容 | 有评测集后标定 |
 | 2 | token 估算是近似值 | 极端长文本可能估偏 | 需要时接 tokenizer |
 | 3 | 中文检索无同义词、会话搜索是 LIKE | 召回不全 | 接 embedding 时统一处理 |
 | 4 | 备份不含设置/会话 | 换机需重设存储路径 | 文档写明；需要时再加可选导出 |
-| 5 | 工具结果不进引用 | "每个答案挂出处"在工具场景不成立 | 与 M8 一起补 |
+| 5 | MCP 工具结果不进引用 | MCP 返回的内容没有出处 | 需要时给 MCP 结果加来源 |
 | 6 | 无鉴权、无多用户 | 仅本机可用（只绑 127.0.0.1） | v1 决策，不提前抽象 |
-| 7 | 多实例共用数据库 | 后开的实例写不进去（readonly） | 已加 launcher 单实例认领 + 启动写探针；开发模式仍可能撞 |
+| 7 | 多实例共用数据库 | 后开的实例写不进去（readonly） | 已加 Electron 单实例锁 + 启动写探针；开发模式仍可能撞 |
 | 8 | 开发模式 Vite proxy 固定 8787 | 已随“固定端口”方案消解：后端不再换端口 | 无需处理 |
 | 9 | `vite.config.ts` / `tsconfig.json` 是 GBK 编码 | 里面中文注释在 UTF-8 编辑器里乱码 | 改这两个文件时注意不要按 UTF-8 保存 |
 | 10 | 上传解压无输出上限 | 恶意 docx 可能撑爆内存 | 加 `maxOutputLength`（未做） |
@@ -231,6 +231,8 @@ Get-ChildItem packages -Recurse -Filter *.test.ts | ForEach-Object { node --impo
 ### P0 · 0.1.0 发布收尾（进行中）
 
 - ✅ 2026-11-18：第一阶段代码已提交（文档库、按需检索、模型配置、引用面板、Electron 外壳）
+- ✅ 2026-11-18：打包链改为 Electron 安装包——`pnpm build` 走 `scripts/build.mjs`（npmmirror 镜像 + electron-builder），移除便携版 node.exe / launcher 流程
+- ✅ 2026-11-18：桌面版「关于」加检测更新（GitHub Releases API，`packages/shell/main.mjs` 的 `corpus:check-update`）
 - ⏳ 在正常终端（非沙箱）跑一次 `pnpm build`，确认 electron-builder 产出安装包
 - ⏳ 首屏按钮（附件、知识库）未接入的占位入口，隐藏或标注「未接入」
 - ⏳ `git tag v0.1.0`
@@ -277,14 +279,14 @@ Get-ChildItem packages -Recurse -Filter *.test.ts | ForEach-Object { node --impo
 
 1. **数据目录**：DB 默认 `%APPDATA%\Corpus`；文档文件位置由用户设置——避免安装目录写权限与升级丢数据。
 2. **引用持久化**：`citations` 以 JSON 存 `messages` 一列，不拆表。
-3. **拒答两层**：无候选 → 短路；有候选但分低 → 同样短路。
+3. **拒答靠工具空结果**：检索是按需工具，不再自动注入或短路；工具返回空时给固定文案，模型据此明说资料里没有。
 4. **PDF 先结构化再切块**：PDF 没有段落信息，不预处理的话 locator 等于没有。
 5. **备份只存源文件**：索引可由源文件重建；会话不备份。
 6. **MCP 而不是自研插件协议**：协议已有。
 7. **模型配置存库、界面优先**：生产环境没有 `.env`，用户必须能自己配；key 不回显。
 8. **桌面壳改 Electron**：2026-11 决策；`node:sqlite` 可用性是前置风险。
-9. **便携版内置 node.exe**：用户不装 Node，代价是包约 90MB。
-10. **端口自动回退**：用户不知道谁占着端口；起不来比换端口伤害大。
+9. **Electron 自带 Node**：用户不装 Node，代价是安装包约 100MB；`node:sqlite` 在 Electron 45 的 Node 24 下可用。
+10. **固定端口 8787**：不自动回退——端口换了前端代理和用户书签都会失效，起不来就明确报错。
 
 ---
 

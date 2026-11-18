@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Database, Download, FileText, Plug, Plus, ScrollText, Settings, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronUp, Database, Download, FileText, Info, Plug, Plus, ScrollText, Settings, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,8 @@ interface AppSidebarProps {
     onOpenDocuments: () => void;
     /** 模型配置 */
     onOpenSettings: () => void;
+    /** 关于 / 检查更新 */
+    onOpenAbout: () => void;
     /** 下载数据库备份 */
     onBackup: () => void;
     /** 对应的内置功能被关掉时，入口也要一起隐藏 */
@@ -54,6 +56,7 @@ export function AppSidebar({
     onOpenMcp,
     onOpenDocuments,
     onOpenSettings,
+    onOpenAbout,
     onBackup,
     dbEnabled,
     logsEnabled,
@@ -162,6 +165,14 @@ export function AppSidebar({
                     >
                         <SlidersHorizontal className="size-3.5" />
                         模型
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onOpenAbout}
+                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
+                    >
+                        <Info className="size-3.5" />
+                        关于
                     </button>
                 </div>
                 <div className="flex items-center gap-1">

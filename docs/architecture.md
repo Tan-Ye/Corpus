@@ -38,7 +38,7 @@
 
 **RAG 逻辑始终在 TypeScript 里，桌面壳只替换外壳。** 性能收益在启动速度和内存占用，不在检索和生成。
 
-0.1.0 先不做桌面壳：便携 zip（内置 `node.exe` + 启动器）已经能双击使用，验证产品价值不需要先付 Electron 的打包成本。详见 §3。
+0.1.0 已采用 **Electron 45** 作为桌面壳（2026-11 由便携版改为 Electron）：主进程内直接 `import` 单文件 server，用户不需要装 Node。详见 §3。
 
 ---
 
@@ -48,7 +48,7 @@
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Electron 主进程（计划中，未实现）             │
+│  Electron 主进程（packages/shell/main.mjs）    │
 │   单实例锁 → 启动 server → 等 /healthz → 窗口 │
 │   退出时关闭 server（同进程则随进程退出）     │
 └───────────────────┬──────────────────────────┘
@@ -68,27 +68,27 @@
 2. **本地与服务器共用同一份代码**。"本地也当服务器处理"这条判断才能落地。
 3. **不依赖桌面壳**。Express + `node:sqlite` 都是普通 Node 能力，Electron 只是外壳。
 
-### 0.1.0 的实际形态：便携 zip
+### 0.1.0 的实际形态：Electron 桌面版
 
-- 目录：`node.exe` + `server.mjs`（rolldown 打成单文件）+ `web/` + `resources/`（prompts、plugins）+ `start.bat` + `launcher.mjs`
-- `start.bat` → `launcher.mjs`：清旧端口文件 → 设 `CORPUS_WEB_DIR` / `CORPUS_RESOURCES_DIR` → `import('./server.mjs')` → 读 `CORPUS_PORT_FILE` → 打开浏览器
+- 产物：NSIS 安装包（`pnpm build` → `dist-package/electron/`）；安装后 `resources/` 内有 `server.mjs` + `web/` + `resources/`（prompts、plugins）
+- `packages/shell/main.mjs`：单实例锁 → 解析数据目录 → 同进程 `import('./server.mjs')` → 轮询 `/healthz` → `loadURL('http://127.0.0.1:8787')`；失败时弹窗 + 写 `shell-error.log`
 - 前端由 server 同源托管（`express.static` + SPA 回落），不需要单独的静态服务器
-- 固定端口 8787；launcher 启动前扫描 8787–8807，结束占用端口的旧 Corpus 实例（别的程序占用时只报错，不误杀）
-- 关掉命令行窗口即退出：launcher 不再“认领”后台旧实例，窗口里的进程就是唯一服务进程
-- 不用 `pnpm`、不用 `node_modules`：server 已 bundle
+- 固定端口 8787，不自动回退；被别的程序占用时明确报错
+- 单实例：`app.requestSingleInstanceLock()`，第二个实例聚焦已有窗口
+- 开发态：`pnpm dev` 一条命令起后端 + 前端 + Electron（`scripts/dev.mjs`）
+- 不用 `pnpm`、不用 `node_modules`：server 已 bundle，Electron 自带 Node
+- 前置风险已消解：`node:sqlite` 在 Electron 45 的 Node 24.22 下可用
 
-### Electron 方案（下一步，未实现）
+### 打包流程
 
-- 主进程直接 `import` server（同进程）或 child 启动；窗口 `loadURL('http://127.0.0.1:<port>/')`，保持同源
-- 单实例：`app.requestSingleInstanceLock()`
-- 资源路径：`process.resourcesPath`，通过 `CORPUS_RESOURCES_DIR` 传给 server
-- **前置风险**：`node:sqlite` 在 Electron 内置的 Node 下是否可用，必须在写主进程之前验证；不可用则要换驱动
+- `scripts/build.mjs`：设 `ELECTRON_MIRROR` / `ELECTRON_BUILDER_BINARIES_MIRROR`（默认 npmmirror）→ `scripts/build-package.mjs` 产 `dist-package/app`（server.mjs + web + resources）→ `electron-builder`
+- `electron-builder.yml`：`files` 只含 `package.json` + `packages/shell/main.mjs` + `preload.cjs`；`extraResources` 精确放 server.mjs / web / resources
 
 ### 为什么不再用 Tauri
 
 Tauri 需要 Rust 工具链，且 sidecar 有三条硬约束（命名带 target triple、`ExitRequested` 里手动 kill、`externalBin` 编译期声明）。Electron 的 Node 进程可以直接跑现有 server 代码，路径更短。
 
-代价是体积：Electron 安装包约 100MB，便携版内置 `node.exe` 约 90MB。0.1.0 先用便携版验证产品，不引入 desktop 壳。
+代价是体积：安装包约 100MB。换来的是自带 Node、用户不用装运行时，且主进程能直接跑现有 server 代码。
 
 ---
 
@@ -479,7 +479,7 @@ interface ParseResult {
 | 7 | **规模天花板** | 超过 10 万 chunk 后变慢 | 文档里写清上限与迁移方案 | 记录即可 |
 | 8 | **首次启动下载 embedding 模型** | 用户体验差 | 进度条 + 断点续传 + 校验（2~3 人日） | M11 |
 | 9 | **Electron 里 `node:sqlite` 不可用** | 打包方案要换存储驱动 | 写主进程之前先验证 | M11 |
-| 11 | **多实例抢数据库** | 后开的实例写不进去（readonly） | launcher 单实例认领 + 启动写探针（已做） | 0.1.0 |
+| 11 | **多实例抢数据库** | 后开的实例写不进去（readonly） | Electron 单实例锁 + 启动写探针（已做） | 0.1.0 |
 | 10 | **PDF 解析低估** | 表格/双栏/扫描件无底洞 | 不做版面分析，先按页提文本 | M6 |
 
 ---

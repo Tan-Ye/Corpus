@@ -29,12 +29,12 @@
 | 资料入库 | Markdown / 文本 / Word(.docx) / PDF；PDF 做编章节条识别与行号定位 |
 | 检索 | 关键词（FTS5 + 中文二元组），覆盖率闸门 + BM25 相对分 |
 | 引用溯源 | 正文 `[n]` 可点开原文并高亮命中行 |
-| 拒答 | 检索不到或分数低于阈值时直接明说 |
+| 拒答 | 检索工具返回空时直接明说，不拿常识凑 |
 | 模型配置 | 界面内填写服务地址 / 模型名 / API Key；未配置时不允许发送 |
 | 插件扩展 | MCP 接入（内置 Context7、DeepWiki、MDN，可加自定义） |
 | 备份 | 导出/导入 zip（文档源文件，不含会话与设置） |
 
-**还没做**：语义（向量）检索、联网检索、工具结果进引用、对话即摄取、评测集、安装包。
+**还没做**：语义（向量）检索、联网检索、工具结果进引用、对话即摄取、评测集、安装包实测。
 
 ---
 
@@ -46,15 +46,15 @@
 
 ---
 
-## 用起来（便携版）
+## 用起来（桌面版）
 
-1. 解压 `Corpus-0.1.0-win64.zip`，双击 `start.bat`（内置 Node 运行时，不用另装）
-2. 浏览器会自动打开 `http://127.0.0.1:8787/`；启动时会自动清理占用这个端口的旧 Corpus 实例（只清 Corpus 自己，别的程序占用会明确报错）
-3. **先配模型**：点右上角显示「未配置模型」的徽章，填服务地址、模型名、API Key
-4. 侧栏「文档」→ 设置文件存储位置（必填，否则不能上传）
-5. 上传文档，然后提问
+1. 装 `Corpus-<version>-setup.exe`，打开 Corpus（Electron 自带运行时，不用另装 Node）
+2. **先配模型**：点右上角显示「未配置模型」的徽章，填服务地址、模型名、API Key
+3. 侧栏「文档」→ 设置文件存储位置（必填，否则不能上传）
+4. 上传文档，然后提问
+5. 侧栏「关于」可以看版本、检查更新（GitHub Releases）
 
-命令行窗口不要关——关掉它就等于关掉服务。数据在 `%APPDATA%\Corpus\`，整个目录拷走即可换机器。
+关掉窗口就等于关掉服务，不留后台进程。数据默认在**安装目录旁的 `data/`**，装到不可写目录时回退到 `%LOCALAPPDATA%\Corpus\`；整个目录拷走即可换机器。
 
 ---
 
@@ -64,9 +64,10 @@
 
 ```powershell
 pnpm install
-pnpm dev                                # 后端 :8787
-pnpm --filter @corpus/web dev           # 前端 :5173（另开一个终端）
+pnpm dev                                # 同时起后端 :8787、前端 :5173 和 Electron 窗口
 ```
+
+只想跑网页：`pnpm dev:server` + `pnpm dev:web`（另开终端），浏览器打开 `http://localhost:5173`（没有桌面版的检查更新）。
 
 首次使用前复制 `.env.example` 为 `.env` 并填 `LLM_*`；也可以在界面里配模型（界面配置优先于 `.env`，且 `.env` 只在非 production 读取）。
 
@@ -79,11 +80,13 @@ node node_modules/oxlint/bin/oxlint                            # lint
 node --import ./.tmp/ts-register.mjs packages/server/src/retrieval/flow.test.ts   # 单个测试
 ```
 
-打包便携版：
+打包安装包：
 
 ```powershell
-node scripts/build-package.mjs     # 产物在 dist-package/Corpus-<version>-win64/
+pnpm build                              # 产物在 dist-package/electron/（NSIS 安装包）
 ```
+
+`pnpm build` 会先构建前端、把 server 打成单文件，再交给 electron-builder；Electron 二进制与 NSIS 工具链默认走 npmmirror 镜像（见 `electron-builder.yml` 与 `scripts/build.mjs`）。
 
 ---
 
@@ -97,7 +100,7 @@ node scripts/build-package.mjs     # 产物在 dist-package/Corpus-<version>-win
 | 存储 | SQLite（`node:sqlite`）+ FTS5 | 单文件、零安装；**不是** better-sqlite3 |
 | LLM | OpenAI 兼容 API | 用户自带 key |
 | 扩展 | MCP（只依赖 tools） | 不自己发明插件协议 |
-| 桌面壳 | Electron（计划中） | 2026-11 由 Tauri 改为 Electron，尚未实现 |
+| 桌面壳 | Electron 45 + electron-builder | 主进程内跑 server，NSIS 安装包；开发态 `pnpm dev` 直接开窗口 |
 
 ---
 
@@ -109,10 +112,10 @@ Corpus/
 │  ├─ core/       # 类型、LLM 调用、解析与分块
 │  ├─ server/     # HTTP API、SQLite、检索、MCP、迁移
 │  ├─ web/        # 前端
-│  └─ shell/      # 桌面壳（空，Electron 方案待做）
+│  └─ shell/      # Electron 主进程（main.mjs）与 preload
 ├─ plugins/       # 内置 MCP 插件清单
 ├─ prompts/       # 系统提示词与交接摘要模板
-├─ scripts/       # 便携版打包与启动器
+├─ scripts/       # 构建与开发脚本（build.mjs / build-package.mjs / dev.mjs）
 ├─ evals/         # 评测集（空，待做）
 └─ docs/          # 架构、路线图、交接
 ```

@@ -8,10 +8,17 @@ copyright: Copyright © 2026 Corpus
 directories:
     output: dist-package/electron
 
+# Electron 二进制走国内镜像（默认从 github releases 拉，几十 KB/s）
+electronDownload:
+    mirror: https://npmmirror.com/mirrors/electron/
+    # nsis / winCodeSign 等工具链镜像走 ELECTRON_BUILDER_BINARIES_MIRROR 环境变量，
+    # scripts/build.mjs 里已设置默认值
+
 # 只打壳：server 与前端作为 extraResources 放进去，不走 asar 内的 node_modules
 files:
     - package.json
     - packages/shell/main.mjs
+    - packages/shell/preload.cjs
 
 extraResources:
     - from: dist-package/app/server.mjs

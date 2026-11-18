@@ -51,3 +51,36 @@ export function getLLMConfig(): Promise<LLMConfigView> {
 export function saveLLMConfig(input: LLMConfigInput): Promise<LLMConfigView> {
     return put<LLMConfigView>('/settings/llm', input);
 }
+
+/** 桌面壳（Electron）经 preload 暴露的只读能力；浏览器里没有这个对象 */
+export interface AppInfo {
+    version: string;
+    isDev: boolean;
+    platform: string;
+}
+
+export interface UpdateCheckResult {
+    /** update = 有新版本；latest = 已是最新；error = 查不了 */
+    status: 'update' | 'latest' | 'error';
+    current: string;
+    latest?: string;
+    url?: string;
+    notes?: string;
+    error?: string;
+}
+
+interface CorpusShellBridge {
+    getAppInfo: () => Promise<AppInfo>;
+    checkUpdate: () => Promise<UpdateCheckResult>;
+}
+
+declare global {
+    interface Window {
+        corpusShell?: CorpusShellBridge;
+    }
+}
+
+/** 浏览器里打开（Vite dev 或直接访问网页）时返回 null，界面据此显示「仅桌面版」 */
+export function getDesktopBridge(): CorpusShellBridge | null {
+    return window.corpusShell ?? null;
+}

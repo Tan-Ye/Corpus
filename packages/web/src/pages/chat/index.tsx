@@ -12,6 +12,7 @@ import { LogsPanel } from '@/components/logs';
 import { McpManager } from '@/components/mcp-manager';
 import { PluginPanel } from '@/components/plugins/plugin-panel';
 import { LLMSettingsDialog } from '@/components/settings/llm-settings';
+import { AboutDialog } from '@/components/settings/about-dialog';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -76,6 +77,7 @@ export function ChatPage() {
     const [docsOpen, setDocsOpen] = useState(false);
     const [mcpOpen, setMcpOpen] = useState(false);
     const [llmOpen, setLlmOpen] = useState(false);
+    const [aboutOpen, setAboutOpen] = useState(false);
     // 模型配置：没配置时禁用输入，并给出唯一入口
     const [llmConfig, setLlmConfig] = useState<LLMConfigView | null>(null);
     const [pluginsOpen, setPluginsOpen] = useState(false);
@@ -478,6 +480,7 @@ export function ChatPage() {
             onOpenMcp={() => setMcpOpen(true)}
             onOpenDocuments={() => setDocsOpen(true)}
             onOpenSettings={() => setLlmOpen(true)}
+            onOpenAbout={() => setAboutOpen(true)}
             dbEnabled={dbEnabled}
             logsEnabled={logsEnabled}
             mcpEnabled={mcpEnabled}
@@ -718,6 +721,8 @@ export function ChatPage() {
                         onClose={() => setLlmOpen(false)}
                         onSaved={setLlmConfig}
                     />
+
+                    <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
                 </main>
 
                 {/* 右侧「本次引用」：宽屏常驻，窄屏由消息下方列表承担 */}

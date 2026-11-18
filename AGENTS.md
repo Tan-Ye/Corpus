@@ -10,8 +10,8 @@
 功能定位：**私人 / 团队的资料库指南 agent**。
 一句话：*你的资料，一个有据可查的整体。*
 
-当前状态：**0.1.0 已可打包发布**（M0~M6、M9 完成：流式对话、文档解析入库、关键词检索、引用与拒答、MCP 工具；便携版 zip 可双击运行）。
-未完成的语义检索、联网检索、评测集、Electron 安装包见 `docs/HANDOFF.md` §5/§7 与 `CHANGELOG.md`。
+当前状态：**0.1.0 已可打包发布**（M0~M6、M9 完成：流式对话、文档解析入库、按需检索、引用与拒答、MCP 工具；Electron 桌面版开发态可启动）。
+未完成的语义检索、联网检索、评测集、安装包实测见 `docs/HANDOFF.md` §5/§7 与 `CHANGELOG.md`。
 
 必读顺序：
 1. 本文件
@@ -53,10 +53,10 @@ Corpus/
 │  ├─ core/          # 数据类型、LLM 调用、解析与分块
 │  ├─ server/        # HTTP API、会话、文件、SQLite、迁移、检索、MCP
 │  ├─ web/           # 前端
-│  └─ shell/         # 桌面壳（空，Electron 方案待做）
+│  └─ shell/         # Electron 主进程（main.mjs）与 preload
 ├─ plugins/          # 内置 MCP 插件清单
 ├─ prompts/          # 系统提示词与交接摘要模板
-├─ scripts/          # 便携版打包（build-package.mjs）与启动器（launcher.mjs）
+├─ scripts/          # 构建与开发脚本（build.mjs / build-package.mjs / dev.mjs）
 ├─ evals/            # 30 条问答集 + 回归脚本（空，待做）
 └─ docs/
 ```
@@ -129,7 +129,7 @@ Corpus/
 
 ## 5. 当前阶段与下一步
 
-0.1.0 已可打包（文档解析 + 文档查询）。打包形态是**便携 zip**（内置 node.exe + 启动器），Electron 安装包未做。
+0.1.0 已可打包（文档解析 + 文档查询）。打包形态是 **Electron 45 + NSIS 安装包**（`pnpm build`），开发态用 `pnpm dev` 一条命令起后端 + 前端 + 窗口；安装包尚未实测。
 
 - 已完成 / 未完成：见 `docs/HANDOFF.md` §1、§5；版本变更见 `CHANGELOG.md`
 - 下一步优先级与工作量：见 `docs/HANDOFF.md` §7
@@ -150,7 +150,7 @@ Corpus/
 | 5 | 联网检索 | 用**搜索 API**，不自建抓取 | M8 |
 | 6 | 桌面壳 | **Electron**（2026-11 由 Tauri 改） | 打包前必须先验证 `node:sqlite` 在 Electron 的 Node 下可用 |
 | 7 | 模型配置 | 存库，**界面配置优先于 `.env`** | `settings` 表的 `llm.*`；`.env` 只在非 production 读取 |
-| 8 | 便携版运行时 | **内置 `node.exe`** + 单文件 server | `scripts/build-package.mjs`，用户不需要装 Node |
+| 8 | 桌面运行时 | **Electron 45 自带 Node 24** + 单文件 server | `packages/shell/main.mjs` 主进程内启动 server，用户不需要装 Node |
 
 ### 判断依据（记下来，避免反复讨论）
 
@@ -184,7 +184,7 @@ Corpus/
 | **parser 只返回 string** | 事后想做"点引用跳原文"要重写整条管道 | M2 的 `ParseResult.locatorMap` 一次做对 |
 | **自我污染** | 幻觉入库后被当成证据，越用越错 | M10：`provenance` + `verified` + 会话不入索引 |
 | **核心冻结过早** | 插件扭曲架构补缺陷 | 先跑通 3 个插件再冻结 |
-| **多实例抢数据库** | 两个 Corpus 同开一个 SQLite，后开的写不进去（`attempt to write a readonly database`） | launcher 单实例认领 + 启动写探针（已做） |
+| **多实例抢数据库** | 两个 Corpus 同开一个 SQLite，后开的写不进去（`attempt to write a readonly database`） | Electron 单实例锁 + 启动写探针（已做） |
 | **打包后资源路径** | `prompts/`、`plugins/` 按源码相对路径读，打包后静默读空（提示词变空、插件消失） | 用 `CORPUS_RESOURCES_DIR` / `CORPUS_WEB_DIR`（已做） |
 | **Electron 里 `node:sqlite` 可能不可用** | 整个打包方案要重选存储驱动 | 写 Electron 主进程之前先验证 |
 | **评测被砍** | 调参全靠感觉 | M7 必做，2 人日 |

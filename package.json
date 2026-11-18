@@ -12,7 +12,7 @@
         "dev:server": "pnpm --filter @corpus/server dev",
         "dev:web": "pnpm --filter @corpus/web dev",
         "electron": "electron --no-sandbox packages/shell",
-        "build": "node scripts/build-package.mjs --out dist-package/app && electron-builder --config electron-builder.yml",
+        "build": "node scripts/build.mjs",
         "build:app": "node scripts/build-package.mjs --out dist-package/app",
         "build:web": "pnpm --filter @corpus/web build",
         "typecheck": "tsc --noEmit",
