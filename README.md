@@ -4,7 +4,7 @@
 
 个人（可扩展到小团队）的知识库问答应用：把散落的文档变成一个能对话、每句话都有出处的资料体。
 
-**当前版本 0.1.0**：文档解析 + 文档查询。变更见 [CHANGELOG.md](CHANGELOG.md)。
+**当前版本 0.1.1**：文档解析 + 文档查询。变更见 [CHANGELOG.md](CHANGELOG.md)。
 语义检索、联网检索、评测集仍在计划中；安装包已可构建（`pnpm build`），尚未实测。见 [docs/HANDOFF.md](docs/HANDOFF.md) §7。
 
 ---

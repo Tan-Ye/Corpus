@@ -284,5 +284,11 @@ if (!gotLock) {
 
     app.on('window-all-closed', () => {
         app.quit();
+
+        // server 与主进程同进程：正常退出会释放 8787 与 SQLite 句柄，
+        // 但只要有一个挂住的句柄，app.quit() 就会停在「窗口已关、进程还在」的状态。
+        // 这种残影会锁住安装目录里的文件，下次装新版本时 NSIS 报「不能打开要写入的文件」。
+        const forceExit = setTimeout(() => app.exit(0), 2000);
+        forceExit.unref();
     });
 }

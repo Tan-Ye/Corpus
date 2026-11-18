@@ -479,7 +479,6 @@ export function ChatPage() {
             onOpenLogs={() => setLogsOpen(true)}
             onOpenMcp={() => setMcpOpen(true)}
             onOpenDocuments={() => setDocsOpen(true)}
-            onOpenSettings={() => setLlmOpen(true)}
             onOpenAbout={() => setAboutOpen(true)}
             dbEnabled={dbEnabled}
             logsEnabled={logsEnabled}

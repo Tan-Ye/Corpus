@@ -40,6 +40,11 @@ nsis:
     oneClick: false
     perMachine: false
     allowToChangeInstallationDirectory: true
+    # 装完不自动启动：应用一启动就会占用安装目录里的 exe，
+    # 紧接着再装一次就会被 NSIS 判定为「无法关闭 Corpus」
+    runAfterFinish: false
+    # 覆盖默认的「应用正在运行」检测，见 scripts/nsis/custom.nsh
+    include: scripts/nsis/custom.nsh
     createDesktopShortcut: true
     createStartMenuShortcut: true
     shortcutName: Corpus

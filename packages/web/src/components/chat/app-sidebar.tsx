@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Database, Download, FileText, Info, Plug, Plus, ScrollText, Settings, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronUp, Database, Download, FileText, Info, Plug, Plus, ScrollText, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -30,8 +30,6 @@ interface AppSidebarProps {
     onOpenLogs: () => void;
     onOpenMcp: () => void;
     onOpenDocuments: () => void;
-    /** 模型配置 */
-    onOpenSettings: () => void;
     /** 关于 / 检查更新 */
     onOpenAbout: () => void;
     /** 下载数据库备份 */
@@ -55,7 +53,6 @@ export function AppSidebar({
     onOpenLogs,
     onOpenMcp,
     onOpenDocuments,
-    onOpenSettings,
     onOpenAbout,
     onBackup,
     dbEnabled,
@@ -160,14 +157,6 @@ export function AppSidebar({
                     </button>
                     <button
                         type="button"
-                        onClick={onOpenSettings}
-                        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
-                    >
-                        <SlidersHorizontal className="size-3.5" />
-                        模型
-                    </button>
-                    <button
-                        type="button"
                         onClick={onOpenAbout}
                         className="flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:text-foreground"
                     >
@@ -185,7 +174,6 @@ export function AppSidebar({
                         <Download className="size-3.5" />
                         备份
                     </button>
-                    <span className="px-1">本地</span>
                 </div>
             </div>
         </aside>

@@ -6,7 +6,7 @@
  *
  * 统一关停：Ctrl+C 或关掉 Electron 窗口都会把其余进程一起收掉。
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,7 +43,21 @@ function run(label, command, args) {
     return child;
 }
 
-function shutdown(exitCode = 0) {
+/** Windows 上 child.kill() 只杀直接子进程；pnpm 经 cmd 起的 node 树会变成孤儿 */
+function killTree(pid) {
+    if (process.platform === 'win32') {
+        spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+        return;
+    }
+
+    try {
+        process.kill(-pid, 'SIGKILL');
+    } catch {
+        // 已经退出
+    }
+}
+
+async function shutdown(exitCode = 0) {
     if (shuttingDown) {
         return;
     }
@@ -51,13 +65,13 @@ function shutdown(exitCode = 0) {
     shuttingDown = true;
 
     for (const child of children) {
-        try {
-            child.kill();
-        } catch {
-            // 已经退出
+        if (child.pid) {
+            killTree(child.pid);
         }
     }
 
+    // 给 taskkill 一点时间收尾；父进程先退的话，子进程照样会残留
+    await new Promise((resolve) => setTimeout(resolve, 300));
     process.exit(exitCode);
 }
 
