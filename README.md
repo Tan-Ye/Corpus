@@ -89,14 +89,18 @@ pnpm build                              # 产物在 dist-package/electron/（NSI
 
 `pnpm build` 会先构建前端、把 server 打成单文件，再交给 electron-builder；Electron 二进制与 NSIS 工具链默认走 npmmirror 镜像（见 `electron-builder.yml` 与 `scripts/build.mjs`）。
 
-发版：版本号改在 `package.json`，提交后打 tag 推上去，GitHub Actions 会自动构建并把安装包挂到 Release：
+发版：
+
+1. 在 [CHANGELOG.md](CHANGELOG.md) 顶部补一段 `## [x.y.z] - 日期`，写这次发布的内容（Release 说明就取这一段）。
+2. `package.json` 的 `version` 改成同一个版本。
+3. 提交后打 tag 推上去，GitHub Actions 自动构建并发布：
 
 ```powershell
-git tag -a v0.1.0 -m "Corpus 0.1.0"
+git tag -a v0.2.0 -m "Corpus 0.2.0"
 git push origin main --tags
 ```
 
-`.github/workflows/release.yml` 只认 `v*` tag，会先校验 tag 与 `package.json` 版本一致，再跑类型检查、lint、打包，最后用 `gh release create` 发布。也可以手动触发 workflow（只构建、不发版）。
+`.github/workflows/release.yml` 只认 `v*` tag：先校验 tag 与 `package.json` 版本一致，从 CHANGELOG 抽出该版本段落作为 Release 说明，再跑类型检查、lint、打包，最后把 NSIS 安装包挂到 Release。CHANGELOG 里缺这个版本段落时 workflow 会直接失败。也可以手动触发 workflow（只构建、不发版）。
 
 ---
 

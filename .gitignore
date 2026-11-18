@@ -35,3 +35,6 @@ coverage/
 Thumbs.db
 dist-package/
 electron-log.txt
+
+# 从 CHANGELOG 抽出来的 Release 说明（构建时生成）
+release-notes.md
