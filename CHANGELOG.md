@@ -65,6 +65,7 @@
 - Electron 45 桌面版：自带 Node 运行时；`pnpm build` 产出 NSIS 安装包（Electron 与 NSIS 工具链下载走 npmmirror 镜像）
 - 「关于」对话框：显示版本号，查 GitHub Releases 检测更新（还没有发布版本时明确提示，不报错；网页版禁用该按钮）
 - 启动失败写 `shell-error.log` 并弹窗，窗口不会一闪而过
+- **GitHub Actions 自动发布**：推 `v*` tag 触发，构建 Windows 安装包并挂到 Release（校验 tag 与 `package.json` 版本一致；CI 里 Electron 走官方源）
 
 ### 工程
 

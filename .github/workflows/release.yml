@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 校验 tag 与 package.json 版本一致
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("$env:GITHUB_REF_NAME" -ne "v$version") {
+            Write-Error "tag $env:GITHUB_REF_NAME 与 package.json 的 v$version 不一致"
+            exit 1
+          }
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: 构建桌面版
+        env:
+          ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm build
+
+      - name: 发布 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $installer = Get-ChildItem dist-package/electron/*.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if (-not $installer) {
+            Write-Error '构建产物里没有找到安装包（dist-package/electron/*.exe）'
+            exit 1
+          }
+          Write-Host "上传 $($installer.Name)（$([math]::Round($installer.Length / 1MB)) MB）"
+          gh release view $env:GITHUB_REF_NAME 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME $installer.FullName --clobber
+          } else {
+            gh release create $env:GITHUB_REF_NAME $installer.FullName `
+              --title "Corpus $env:GITHUB_REF_NAME" `
+              --generate-notes
+          }

@@ -235,7 +235,9 @@ Get-ChildItem packages -Recurse -Filter *.test.ts | ForEach-Object { node --impo
 - ✅ 2026-11-18：桌面版「关于」加检测更新（GitHub Releases API，`packages/shell/main.mjs` 的 `corpus:check-update`）
 - ⏳ 在正常终端（非沙箱）跑一次 `pnpm build`，确认 electron-builder 产出安装包
 - ⏳ 首屏按钮（附件、知识库）未接入的占位入口，隐藏或标注「未接入」
-- ⏳ `git tag v0.1.0`
+- ✅ 2026-11-18：`git tag v0.1.0` 已打（未 push）
+- ✅ 2026-11-18：`.github/workflows/release.yml`——推 `v*` tag 自动构建并发布 Release（校验版本号、类型检查、lint、打包、`gh release create`）
+- ⏳ 把 `main` 与 `v0.1.0` 推到 GitHub，跑一次发布流程验证
 
 ### P0 · 评测集（2 人日）
 
