@@ -52,7 +52,7 @@
 - 引用结构：`id/documentId/title/locator/startLine/endLine/excerpt/content/provenance`
 - 前端：正文 `[n]` 上标 → 滚动到出处；宽屏右侧「本次引用」面板常驻（`xl`），窄屏用消息下方列表
 - 查看原文：`GET /api/documents/:id/content?start=&end=` 按行返回 markdown，弹窗高亮
-- 检索日志：`logs.type='retrieval'`，记录 query / hits / 是否拒答 / 耗时
+- 检索日志：`logs.type='retrieval'`，记录 query / hits / 耗时
 - **默认开启**：文档库与文档检索默认打开（`features.ts` 的 `defaultEnabled`），数据库/日志/MCP 默认关
 
 ### 2.3 文档入库
